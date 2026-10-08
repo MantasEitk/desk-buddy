@@ -42,6 +42,10 @@ func uiRoutes(mux *http.ServeMux) {
 		st, last := getStatus()
 		info := map[string]any{"mode": c.Mode, "server": c.Server, "connected": connected(), "paused": c.Paused,
 			"startup": startsWithWindows(), "status": st, "last": last, "version": version, "pairs": pairs()}
+		if !connected() {
+			j, f, busy := joinState()
+			info["joining"], info["found"], info["scanning"] = j, f, busy
+		}
 		if connected() {
 			phone := c.Server
 			if c.Mode == "local" {
@@ -63,6 +67,17 @@ func uiRoutes(mux *http.ServeMux) {
 		json.NewDecoder(r.Body).Decode(&b)
 		res := map[string]any{"ok": true}
 		switch b["do"] {
+		case "scan": // look for Desk Buddy on the Wi-Fi (and join by itself if there's exactly one)
+			go scan(b["auto"] == "1")
+		case "joinfound":
+			go join(found{Name: b["name"], Addr: b["addr"]})
+		case "cancel":
+			joinMu.Lock()
+			if joinNow != nil {
+				declined[joinNow.Addr] = true
+			}
+			joinNow = nil
+			joinMu.Unlock()
 		case "local":
 			c := current()
 			if c.Mode != "local" || c.Key == "" {

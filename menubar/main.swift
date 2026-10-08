@@ -446,11 +446,12 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func askToPair(id: String, code: String, name: String) {
         NSApp.activate(ignoringOtherApps: true)
         let a = NSAlert()
-        a.messageText = "A Kindle wants to connect"
+        let kindle = name.lowercased().contains("kindle")
+        a.messageText = kindle ? "A Kindle wants to connect" : "\(name) wants to connect"
         a.informativeText = """
-        Check that the Kindle shows the code \(code).
+        Check that \(kindle ? "the Kindle" : "it") shows the code \(code).
 
-        Allowing it lets the Kindle show and change your tasks, calendar and the rest of Desk Buddy. Only allow a Kindle you own.
+        Allowing it lets \(kindle ? "the Kindle" : "that computer") show and change your tasks, calendar and the rest of Desk Buddy. Only allow \(kindle ? "a Kindle" : "a computer") you own.
         """
         a.addButton(withTitle: "Allow")
         a.addButton(withTitle: "Don't Allow")

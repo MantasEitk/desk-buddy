@@ -54,6 +54,8 @@ input[type=text]{font:inherit;font-size:15px;border:0;border-bottom:1.5px solid 
 .note{font-weight:700;margin-top:8px}
 .ok{color:var(--ok);font-weight:700}
 .hide{display:none!important}
+summary{cursor:pointer}details.box[open] summary{margin-bottom:6px}
+a{color:var(--ink)}
 </style></head><body>
 <header><img class="buddy" src="{{BUDDY}}" alt=""><b>Desk Buddy</b><button id="pause" class="pill hide" onclick="togglePause()">Pause</button></header>
 <div class="wrap">
@@ -102,7 +104,7 @@ document.querySelectorAll("nav button").forEach((b) => b.onclick = () => { page 
 
 async function refresh() { await loadInfo(); await loadData(); render(); }
 let editing = false;
-setInterval(async () => { if (!editing && !document.activeElement?.matches("input,select")) await refresh(); }, 5000);
+setInterval(async () => { if (!editing && !document.activeElement?.matches("input,select")) await refresh(); }, 2000);
 
 function render() {
   const m = $("#main");
@@ -112,15 +114,30 @@ function render() {
 }
 
 // ---- setting up ----
+let scanned = false;
+function joinBox() {
+  const j = info.joining, f = info.found || [];
+  if (j && j.state === "asking") return `<div class="ask"><b>Connecting to ${esc(j.name)}…</b></div>`;
+  if (j && j.state === "waiting") return `<div class="ask"><b>Click Allow on ${esc(j.name)}</b>
+<p class="sub">It asks "Windows PC wants to connect". Check it shows this code: <span class="code">${esc(j.code)}</span></p>
+<button class="pill" onclick="act({do:'cancel'}).then(refresh)">Cancel</button></div>`;
+  let out = j && (j.state === "denied" || j.state === "failed") ? `<p class="note">${esc(j.reason)}</p>` : "";
+  if (info.scanning) return out + `<p class="sub">Looking for Desk Buddy on your Wi-Fi…</p>`;
+  if (f.length) out += `<div class="box"><b>Found on your Wi-Fi</b>` + f.map((x) => `<div class="row"><div class="t"><b>${esc(x.name)}</b><span>${esc(x.addr)}</span></div><button class="pill solid" onclick='act({do:"joinfound",name:${JSON.stringify(x.name)},addr:${JSON.stringify(x.addr)}}).then(()=>setTimeout(refresh,400))'>Join</button></div>`).join("") + `</div>`;
+  else if (scanned) out += `<p class="sub">No Desk Buddy found on this Wi-Fi. <a href="#" onclick="act({do:'scan'}).then(()=>setTimeout(refresh,1800));return false">Look again</a></p>`;
+  return out;
+}
 function setupPage() {
+  if (!scanned) { scanned = true; act({do: "scan", auto: "1"}).then(() => setTimeout(refresh, 1800)); }
   return `<div class="setup"><div class="center"><img class="buddy big" src="{{BUDDY}}" alt=""><h1>Welcome to Desk Buddy</h1>
 <p class="sub">Your tasks, calendar and music on your Kindle, next to this PC.</p></div>
+${joinBox()}
 <div class="choice"><div><b>Run Desk Buddy on this PC</b><span>If this is your only computer, or the first one you set up. Nothing else to set up: your Kindle finds this PC on the Wi-Fi.</span></div><button class="pill solid" onclick="setupLocal()">Set up here</button></div>
-<div class="box"><b>Or join Desk Buddy on another computer</b>
+<details class="box"><summary><b>Desk Buddy is on another network, or in the cloud?</b></summary>
 <p class="sub">On that computer open Desk Buddy › This Mac (or This PC) › <b>Connect a computer…</b>, then type what it shows:</p>
 <label class="sub">Server</label><input type="text" id="srv" placeholder="https://….workers.dev  or  192.168.1.23:8787">
 <label class="sub">Code</label><input type="text" id="code" placeholder="ABCD-1234" autocomplete="off">
-<p><button class="pill" onclick="join()">Join</button></p>${note ? `<p class="note">${esc(note)}</p>` : ""}</div></div>`;
+<p><button class="pill" onclick="join()">Join</button></p>${note ? `<p class="note">${esc(note)}</p>` : ""}</details></div>`;
 }
 async function setupLocal() { await act({do: "local"}); note = ""; page = "server"; markNav(); setTimeout(refresh, 1500); await refresh(); }
 async function join() {
