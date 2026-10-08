@@ -31,8 +31,8 @@ func openWindow() {
 	go func() {
 		runtime.LockOSThread() // a window and its messages live on one thread
 		w := webview2.NewWithOptions(webview2.WebViewOptions{
-			AutoFocus: true,
-			DataPath:  filepath.Join(configDir(), "window"),
+			AutoFocus:     true,
+			DataPath:      filepath.Join(configDir(), "window"),
 			WindowOptions: webview2.WindowOptions{Title: "Desk Buddy", Width: 960, Height: 700, IconId: 1, Center: true},
 		})
 		if w == nil {

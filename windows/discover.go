@@ -65,10 +65,64 @@ func findDesks() []found {
 		addr := fmt.Sprintf("http://%s:%d", from.IP, r.Port)
 		seen[addr] = found{Name: r.Name, Addr: addr}
 	}
+	if len(seen) == 0 { // no answer (often Windows Firewall blocks it): check the addresses directly
+		for _, f := range probeSubnets(mine) {
+			seen[f.Addr] = f
+		}
+	}
 	out := make([]found, 0, len(seen))
 	for _, f := range seen {
 		out = append(out, f)
 	}
+	return out
+}
+
+// probeSubnets asks every address on this PC's own networks (up to /24 each) for Desk Buddy's
+// /api/where on port 8787, a few at a time. A normal outgoing connection, like a browser's, so
+// firewalls let it through. Answers 200 or 401 (needs the key) mean Desk Buddy is there.
+func probeSubnets(mine map[string]bool) []found {
+	var ips []string
+	ifs, _ := net.InterfaceAddrs()
+	for _, a := range ifs {
+		n, ok := a.(*net.IPNet)
+		if !ok || n.IP.To4() == nil || n.IP.IsLoopback() || !n.IP.IsPrivate() {
+			continue
+		}
+		base := n.IP.To4().Mask(net.CIDRMask(24, 32))
+		for i := 1; i < 255; i++ {
+			ip := net.IPv4(base[0], base[1], base[2], byte(i)).String()
+			if !mine[ip] {
+				ips = append(ips, ip)
+			}
+		}
+	}
+	hc := &http.Client{Timeout: 1200 * time.Millisecond}
+	var mu sync.Mutex
+	var out []found
+	sem := make(chan struct{}, 64)
+	var wg sync.WaitGroup
+	for _, ip := range ips {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(ip string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			addr := "http://" + ip + ":8787"
+			req, _ := http.NewRequest("GET", addr+"/api/where", nil)
+			req.Header.Set("User-Agent", userAgent)
+			resp, err := hc.Do(req)
+			if err != nil {
+				return
+			}
+			resp.Body.Close()
+			if resp.StatusCode == 200 || resp.StatusCode == 401 {
+				mu.Lock()
+				out = append(out, found{Name: "Desk Buddy at " + ip, Addr: addr})
+				mu.Unlock()
+			}
+		}(ip)
+	}
+	wg.Wait()
 	return out
 }
 
