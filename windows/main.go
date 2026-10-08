@@ -17,7 +17,7 @@ import (
 	"fyne.io/systray"
 )
 
-const version = "0.3"
+const version = "0.4"
 
 //go:embed icon.ico
 var iconICO []byte
@@ -63,7 +63,13 @@ func setLast(label, err string) {
 func logf(format string, a ...any) { log.Printf(format, a...) }
 
 func main() {
-	if !onlyOne() {
+	if len(os.Args) > 1 && os.Args[1] == "--after-update" {
+		// just updated: the old copy is still closing, so wait for it (up to 15 s)
+		for i := 0; i < 30 && !onlyOne(); i++ {
+			time.Sleep(500 * time.Millisecond)
+		}
+		go cleanAfterUpdate()
+	} else if !onlyOne() {
 		// already running: ask it to show its window
 		if b, err := os.ReadFile(filepath.Join(configDir(), "running.url")); err == nil {
 			if resp, err := quick.Get(strings.Replace(string(b), "/?t=", "/show?t=", 1)); err == nil {
@@ -89,6 +95,7 @@ func main() {
 	loadConfig()
 	startPage()
 	go measure()
+	go updates()
 	go keepServer()
 	go watchPairing()
 	go heartbeats()

@@ -66,8 +66,12 @@ func shellOpen(target string) error {
 // onlyOne: false when Desk Buddy is already running.
 func onlyOne() bool {
 	name, _ := syscall.UTF16PtrFromString(`Local\DeskBuddyWindows`)
-	_, err := windows.CreateMutex(nil, false, name)
-	return err != windows.ERROR_ALREADY_EXISTS
+	h, err := windows.CreateMutex(nil, false, name)
+	if err == windows.ERROR_ALREADY_EXISTS {
+		windows.CloseHandle(h) // don't keep the other copy's mutex alive
+		return false
+	}
+	return true
 }
 
 const runKey = `Software\Microsoft\Windows\CurrentVersion\Run`

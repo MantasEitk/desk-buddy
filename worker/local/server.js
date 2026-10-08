@@ -87,7 +87,7 @@ Bun.serve({
   async fetch(request) {
     const path = new URL(request.url).pathname;
     // the Kindle's updates and the phone page's fonts: plain files, no key (as on Cloudflare)
-    if ((path.startsWith("/kindle/") || path.startsWith("/fonts/")) && !path.includes("..")) {
+    if ((path.startsWith("/kindle/") || path.startsWith("/fonts/") || path.startsWith("/windows/")) && !path.includes("..")) {
       const f = Bun.file(join(assets, path));
       if (await f.exists()) return new Response(f);
     }

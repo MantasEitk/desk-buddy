@@ -94,7 +94,9 @@ a{color:var(--ink)}summary{cursor:pointer}
 <button data-p="server"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.6 9.2 4.7 4.7 0 0 0 7 18.5z"/></svg><span class="txt">Server</span><span class="badge hide" id="bs"></span></button>
 <button data-p="permissions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg><span class="txt">Permissions</span></button>
 <button data-p="performance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m12 12-3.5-4"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><path d="M7 15.5h.01M17 15.5h.01M12 6.5h.01"/></svg><span class="txt">Performance</span></button>
-<button data-p="about"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.1"/></svg><span class="txt">About</span></button>
+<button data-p="about" id="aboutbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.1"/></svg><span class="txt">About</span></button>
+<div style="flex:1"></div>
+<button id="updbtn" class="hide" onclick="act({do:'update'}).then(refresh)" style="height:auto;padding:8px 10px;border:1px solid var(--ink);flex-direction:column;align-items:flex-start;gap:0"><span style="display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5M5 20h14"/></svg><span class="txt">Update Desk Buddy</span></span><span class="txt sub" id="updsub" style="margin-left:24px;font-weight:400">New version ready</span></button>
 </nav>
 <main id="main"></main>
 </div>
@@ -120,6 +122,9 @@ async function loadInfo() {
   p.classList.toggle("on", !!info.paused);
   p.innerHTML = info.paused ? "&#9654; Resume" : "&#10074;&#10074; Pause";
   p.title = info.paused ? "Connect this PC to the Kindle again" : "Stop this PC talking to the Kindle: no Deck, chime or \"in use\" until you resume";
+  const u = info.update || {};
+  $("#updbtn").classList.toggle("hide", !u.ready);
+  if (u.ready) $("#updsub").textContent = u.busy ? u.note : "Version " + u.ready.version + " is ready";
   const n = (info.pairs || []).length;
   badge("bs", n, "server");
   if (n && page !== "server") { page = "server"; markNav(); }
@@ -413,6 +418,7 @@ function aboutPage() {
 <div style="display:flex;gap:16px;align-items:center;margin:8px 0 12px"><img class="buddy" style="width:60px" src="{{BUDDY}}" alt=""><div><h1>Hi, I'm Desk Buddy</h1><span class="sub">for Windows · ${esc(info.version)}</span></div></div>
 <p style="font-size:13.5px">I turn an old Kindle into a calm desk companion: your tasks, calendar, weather and music, on e-ink, next to your computer.</p>
 ${row("Version", "Desk Buddy for Windows", `<span class="sub" style="font-size:13px">${esc(info.version)}</span>`)}
+${row("Updates", (info.update && info.update.note) || (info.update && info.update.ready ? "Version " + esc(info.update.ready.version) + " is ready: Update Desk Buddy at the bottom of the sidebar" : "From your Desk Buddy server, checked every 6 hours. It installs only when you click."), `<button class="pill" onclick="act({do:'checkupdate'}).then(refresh)">Check now</button>`)}
 ${row("Quit", "Stops Desk Buddy until you open it again" + (info.mode === "local" ? " (the Kindle can't update meanwhile)" : ""), `<button class="pill" onclick="act({do:'quit'})">Quit</button>`)}
 ${row("Uninstall", "Removes Desk Buddy from this PC: no more starting with Windows, its settings removed. Then delete its folder. Your tasks stay saved.", `<button class="pill" onclick="if(confirm('Uninstall Desk Buddy?\\n\\nIt stops, won\\'t start with Windows any more, and its settings are removed. Its folder opens so you can delete it.'))act({do:'uninstall'})">Uninstall…</button>`)}`;
 }

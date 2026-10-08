@@ -12,3 +12,4 @@ worker/public/kindle/*
 *.sqlite
 *.sqlite-*
 .DS_Store
+worker/public/windows/*

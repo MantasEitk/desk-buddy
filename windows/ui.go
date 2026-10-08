@@ -59,6 +59,9 @@ func uiRoutes(mux *http.ServeMux) {
 		st, last := getStatus()
 		info := map[string]any{"mode": c.Mode, "server": c.Server, "connected": connected(), "paused": c.Paused,
 			"startup": startsWithWindows(), "status": st, "last": last, "version": version, "pairs": pairs(), "perf": perfInfo(), "node": nodeInstalled()}
+		if r, n, busy := updateState(); r != nil || n != "" {
+			info["update"] = map[string]any{"ready": r, "note": n, "busy": busy}
+		}
 		if !connected() {
 			j, f, busy := joinState()
 			info["joining"], info["found"], info["scanning"] = j, f, busy
@@ -138,6 +141,16 @@ func uiRoutes(mux *http.ServeMux) {
 				srv = lanAddress()
 			}
 			res = map[string]any{"code": o.Code, "server": srv}
+		case "update":
+			go applyUpdate()
+		case "checkupdate":
+			if err := checkUpdate(); err != nil {
+				setUpdNote("Couldn't check just now", false)
+			} else if r, _, _ := updateState(); r == nil {
+				setUpdNote("Up to date", false)
+			} else {
+				setUpdNote("", false)
+			}
 		case "openurl": // in the browser, for these addresses only
 			if u := b["url"]; u == "https://dash.cloudflare.com/sign-up" || u == "https://nodejs.org" {
 				shellOpen(u)
