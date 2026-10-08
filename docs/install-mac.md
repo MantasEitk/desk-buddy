@@ -4,11 +4,19 @@ The Mac app lives in your menu bar (a small Desk Buddy). It runs Desk Buddy's se
 
 Needs macOS 13 Ventura or newer.
 
+## Before you download
+
+- **About 50 MB** to download (the exact size is on the release page). It's one app for every Mac, Apple Silicon and Intel, with Desk Buddy's server built in for both, which is most of the size. Installed, it takes about 150 MB.
+- **It isn't signed by Apple (yet).** Signing needs a paid Apple Developer membership (99 USD a year), which this hobby project doesn't have. So the first time you open it, macOS warns that it can't check who made it, and you allow it once (below). That warning is about the missing paid signature, not about anything the app does: the code is all here to read, and [docs/privacy.md](privacy.md) explains what it touches.
+- Because it isn't signed, macOS also treats each new version as a new app and **may ask for its permissions again after an update**.
+
 ## Install
 
 1. Download **Desk Buddy for Mac** (`.zip`) from [Releases](../../../releases) and open the zip.
 2. Drag **Desk Buddy** into your **Applications** folder.
-3. Open it. The first time, macOS may say it can't check the app (it isn't signed with an Apple Developer ID yet): **right-click › Open**, then **Open**. (On newer macOS: System Settings › Privacy & Security › **Open Anyway**.)
+3. Open it. The first time, macOS warns that it can't check the app (see [Before you download](#before-you-download)). Allow it once:
+   - **macOS 15 Sequoia and newer:** click **Done** on the warning, then open **System Settings › Privacy & Security**, scroll down to *"Desk Buddy" was blocked…* and click **Open Anyway** (it asks for your password). Open Desk Buddy again and click **Open**.
+   - **macOS 13–14:** **right-click** (or Control-click) Desk Buddy in Applications › **Open**, then **Open** again.
 4. The **welcome** walks you through it:
    - what Desk Buddy does,
    - the permissions (each one is optional and only adds what it says),

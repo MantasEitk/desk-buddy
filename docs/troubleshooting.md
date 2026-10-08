@@ -48,6 +48,10 @@ Hold the power button about 15 seconds until it restarts, then open Desk Buddy f
 - Spotify sometimes reports nothing playing: play / pause once.
 - Music playing on another device (Spotify Connect) doesn't show.
 
+## macOS says it can't open Desk Buddy, or that it "can't check it"
+
+The app isn't signed by Apple (see [Before you download](install-mac.md#before-you-download)). Allow it once: macOS 15 and newer: **System Settings › Privacy & Security**, scroll to the message about Desk Buddy, **Open Anyway**. macOS 13–14: right-click the app › **Open**.
+
 ## The Mac asks for permissions again
 
 The app isn't signed with an Apple Developer ID yet, so macOS sees each new version as a new app. Allow them again on the Permissions page.
