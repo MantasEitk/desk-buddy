@@ -20,6 +20,14 @@ import (
 //go:embed ui.html
 var uiHTML string
 
+// the same font as the Mac app and the Kindle (SIL Open Font License)
+//
+//go:embed AtkinsonHyperlegible-Regular.ttf
+var fontRegular []byte
+
+//go:embed AtkinsonHyperlegible-Bold.ttf
+var fontBold []byte
+
 func uiURL() string { return strings.Replace(pageURL, "/?t=", "/ui?t=", 1) }
 
 func uiRoutes(mux *http.ServeMux) {
@@ -33,6 +41,15 @@ func uiRoutes(mux *http.ServeMux) {
 		page := strings.ReplaceAll(uiHTML, "{{BUDDY}}", "data:image/png;base64,"+base64.StdEncoding.EncodeToString(buddyPNG))
 		io.WriteString(w, strings.Replace(page, "{{VERSION}}", version, 1))
 	})
+	mux.HandleFunc("/ui/font/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "font/ttf")
+		w.Header().Set("Cache-Control", "max-age=86400")
+		if strings.HasSuffix(r.URL.Path, "bold.ttf") {
+			w.Write(fontBold)
+		} else {
+			w.Write(fontRegular)
+		}
+	})
 	mux.HandleFunc("/ui/info", func(w http.ResponseWriter, r *http.Request) {
 		if !ok(r) {
 			http.Error(w, "", 403)
@@ -41,7 +58,7 @@ func uiRoutes(mux *http.ServeMux) {
 		c := current()
 		st, last := getStatus()
 		info := map[string]any{"mode": c.Mode, "server": c.Server, "connected": connected(), "paused": c.Paused,
-			"startup": startsWithWindows(), "status": st, "last": last, "version": version, "pairs": pairs()}
+			"startup": startsWithWindows(), "status": st, "last": last, "version": version, "pairs": pairs(), "perf": perfInfo(), "node": nodeInstalled()}
 		if !connected() {
 			j, f, busy := joinState()
 			info["joining"], info["found"], info["scanning"] = j, f, busy
@@ -121,6 +138,34 @@ func uiRoutes(mux *http.ServeMux) {
 				srv = lanAddress()
 			}
 			res = map[string]any{"code": o.Code, "server": srv}
+		case "openurl": // in the browser, for these addresses only
+			if u := b["url"]; u == "https://dash.cloudflare.com/sign-up" || u == "https://nodejs.org" {
+				shellOpen(u)
+			}
+		case "openpage": // the phone page in the browser
+			c := current()
+			base := c.Server
+			if local() {
+				base = lanAddress()
+			}
+			shellOpen(base + "/app?key=" + c.Key)
+		case "uninstall":
+			uninstall()
+		case "cloudsetup":
+			if err := runSetup(); err != nil {
+				res = map[string]any{"error": err.Error()}
+			}
+		case "cloudconnect":
+			if err := connectCloud(b["url"]); err != nil {
+				res = map[string]any{"error": err.Error()}
+			}
+		case "tolocal":
+			if err := switchToLocal(); err != nil {
+				res = map[string]any{"error": err.Error()}
+			}
+		case "cloudprompt":
+			prepareKit()
+			res = map[string]any{"text": cloudPrompt}
 		case "ai":
 			res = map[string]any{"text": aiInstructions()}
 		case "quit":

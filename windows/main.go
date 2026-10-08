@@ -17,7 +17,7 @@ import (
 	"fyne.io/systray"
 )
 
-const version = "0.2"
+const version = "0.3"
 
 //go:embed icon.ico
 var iconICO []byte
@@ -88,6 +88,7 @@ func main() {
 	}()
 	loadConfig()
 	startPage()
+	go measure()
 	go keepServer()
 	go watchPairing()
 	go heartbeats()

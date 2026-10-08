@@ -14,5 +14,9 @@ rm -rf dist && mkdir -p "$OUT"
 CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-H=windowsgui" -o "$OUT/Desk Buddy.exe" .
 (cd ../worker && node_modules/.bin/bun build local/server.js --compile --minify --target=bun-windows-x64 --outfile "../windows/$OUT/desk-buddy-server.exe" >/dev/null)
 cp -R ../worker/public "$OUT/public"
+# the cloud setup kit (Server › Your own cloud server): the server's code + setup.js
+mkdir -p "$OUT/cloud-kit"
+cp -R ../worker/src ../worker/schema.sql ../worker/setup.js "$OUT/cloud-kit/"
+node -e 'const p=require("../worker/package.json");delete p.devDependencies.bun;delete p.scripts;console.log(JSON.stringify(p,null,2))' > "$OUT/cloud-kit/package.json"
 (cd dist && zip -q -r -X Desk-Buddy-for-Windows.zip "Desk Buddy for Windows")
 ls -la dist "$OUT"

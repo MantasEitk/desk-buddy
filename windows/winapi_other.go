@@ -19,3 +19,5 @@ const serverExe = "desk-buddy-server"
 func hideWindow(*exec.Cmd) {}
 
 func openWindow() { openPage() }
+
+func usage(int) (float64, float64, bool) { return 0, 40, true }
