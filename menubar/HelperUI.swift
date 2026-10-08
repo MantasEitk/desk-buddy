@@ -85,6 +85,9 @@ final class HelperModel: ObservableObject {
     var onCloudPrompt: () -> Void = {}           // copy the AI prompt
     var onCloudScript: () -> Void = {}           // open setup.sh in TextEdit, to read
     var onCopyAI: () -> Void = {}                // copy the instructions for AI assistants (This Mac)
+    var onConnectComputer: () -> Void = {}       // a one-time code for connecting another computer
+    @Published var connectCode = ""              // "AB12-CD34" while one is showing
+    @Published var connectServer = ""            // the address to type next to it
     @Published var aiNote = ""
     var onCloudConnect: (String) -> Void = { _ in } // check the address, then switch to it
 }
@@ -1001,7 +1004,29 @@ struct HelperWindow: View {
             if let comps = model.computers {
                 Row(title: "Other computers", hint: comps.count < 2
                     ? "Searching for other devices… Install Desk Buddy on another computer to connect it."
-                    : "Your Windows PC is connected too.")
+                    : "Your Windows PC is connected too.") {
+                    Pill(title: "Connect a computer…") { model.onConnectComputer() }
+                }
+            }
+            if !model.connectCode.isEmpty {
+                // what to type on the other computer (Desk Buddy for Windows asks for both)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("On the other computer, open Desk Buddy and enter:").font(KD.font(12)).foregroundColor(Color.secondary)
+                    HStack(spacing: 18) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Server").font(KD.font(11)).foregroundColor(Color.secondary)
+                            Text(model.connectServer).font(.system(size: 14, weight: .semibold, design: .monospaced)).textSelection(.enabled)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Code").font(KD.font(11)).foregroundColor(Color.secondary)
+                            Text(model.connectCode).font(.system(size: 20, weight: .bold, design: .monospaced)).textSelection(.enabled)
+                        }
+                    }
+                    Text("The code works once, for 10 minutes. The computer then connects by itself.").font(KD.font(11)).foregroundColor(Color.secondary)
+                }
+                .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.4), lineWidth: 1))
+                .padding(.top, 8)
             }
             Row(title: "Tasks page", hint: "Your tasks in a web browser, also on your phone") { Pill(title: "Open") { model.onOpenPage() } }
             // Let Claude Code / Codex (running on this Mac) change the tasks: instructions to paste

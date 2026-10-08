@@ -682,6 +682,20 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 NSPasteboard.general.setString(CloudGuide.prompt, forType: .string)
                 self?.model.cloudNote = "Prompt copied. Paste it into your AI helper."
             }
+            model.onConnectComputer = { [weak self] in
+                guard let self else { return }
+                self.backend.post("/api/connect/offer", [:]) { data in
+                    let code = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["code"] as? String
+                    DispatchQueue.main.async {
+                        self.model.connectCode = code ?? ""
+                        self.model.connectServer = self.backend.local ? self.backend.lanAddress : self.backend.settings.cloud
+                        if code == nil { self.model.status = "Couldn't make a code: is the server reachable?" }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 600) { // gone after 10 minutes
+                            if self.model.connectCode == code { self.model.connectCode = "" }
+                        }
+                    }
+                }
+            }
             model.onCopyAI = { [weak self] in
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(App.aiInstructions(), forType: .string)

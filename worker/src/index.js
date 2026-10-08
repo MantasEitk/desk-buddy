@@ -90,6 +90,22 @@ async function handle(request, env, ctx) {
     const r = pairing(path, method, authed, env.KEY, await body(request).catch(() => ({})));
     if (r) return r;
   }
+  // Connecting another computer (Desk Buddy for Windows): the Mac app makes a one-time code
+  // (POST /api/connect/offer, with the key), the new computer sends it here and gets the key.
+  // Valid 10 minutes, used once; 10 wrong tries end it. Works on Cloudflare and locally.
+  if (path === "/api/connect" && method === "POST") {
+    const store = new Store(env.DB, env.TZ || "Europe/London", ctx);
+    const offer = await store.get("connect_code");
+    const given = String((await body(request).catch(() => ({}))).code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!offer || now() > offer.until) return text("That code has expired. Make a new one in Desk Buddy on your Mac.", 410);
+    if (given !== offer.code) {
+      const tries = (offer.tries || 0) + 1;
+      await store.set("connect_code", tries >= 10 ? null : { ...offer, tries });
+      return text("That code isn't right.", 403);
+    }
+    await store.set("connect_code", null);
+    return json({ key: env.KEY });
+  }
   if (!authed) {
     return html(`<!DOCTYPE html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Desk Buddy</title>
 <p style="font:16px system-ui;margin:2em">Open the Desk Buddy link with the key once on this device. It's remembered after that.</p>`, 401);
@@ -183,6 +199,22 @@ async function handle(request, env, ctx) {
       await db.set("move_to", server ? { server, name: String(b.name || "").slice(0, 60), at: now() } : null);
       return json({ ok: true });
     }
+    // a one-time code for connecting another computer (see /api/connect above)
+    if (path === "/api/connect/offer" && method === "POST") {
+      const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", r = crypto.getRandomValues(new Uint8Array(8));
+      const code = Array.from(r, (n) => abc[n % abc.length]).join("");
+      await db.set("connect_code", { code, until: now() + 600, tries: 0 });
+      return json({ code: code.slice(0, 4) + "-" + code.slice(4), minutes: 10 });
+    }
+    // what Desk Buddy on a computer reports when something fails (like /api/kindle/log)
+    if (path === "/api/helper/log" && method === "POST") {
+      const b = await body(request);
+      const log = ((await db.get("helper_log")) || []).slice(-49);
+      log.push({ at: new Date().toISOString(), machine: String(b.machine || "").slice(0, 8), text: String(b.text || "").slice(0, 500) });
+      await db.set("helper_log", log);
+      return json({ ok: true });
+    }
+    if (path === "/api/helper/log" && method === "GET") return json((await db.get("helper_log")) || []);
     if (path === "/api/heartbeat" && method === "POST") {
       const b = await body(request);
       if (!(b.machine in MACHINES)) throw new HttpError(400, "machine must be mac or pc");
@@ -480,7 +512,7 @@ async function handle(request, env, ctx) {
   // Anything that changes data tells a waiting Kindle (GET /api/desk?wait). Heartbeats only when
   // the list or light / dark changed (above); logs and the computers' own reports don't count.
   if (method !== "GET" && res.status < 400 && (path.startsWith("/api/") || path.startsWith("/do/"))
-      && !/^\/api\/(heartbeat|kindle\/log|pair|deck\/icons|helper\/log)/.test(path)) {
+      && !/^\/api\/(heartbeat|kindle\/log|pair|deck\/icons|helper\/log|connect)/.test(path)) {
     await db.changed();
   }
 
