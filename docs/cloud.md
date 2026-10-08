@@ -1,6 +1,10 @@
 # Your own cloud server (optional)
 
-By default Desk Buddy runs on your Mac. That's all most people need. A cloud server is worth it if you want:
+By default Desk Buddy runs on your Mac. That's all most people need.
+
+*Why it exists at all:* honestly, it's a bit overkill. I added it because my Kindle kept dropping its USB connection whenever I copied anything big to it, so I needed a way to send it new versions over the internet instead. Running the server on my own Cloudflare account did that, and it stuck around because it's handy.
+
+A cloud server is worth it if you want:
 
 - the Kindle to keep working while your Mac sleeps or is off,
 - the phone page to work away from home,

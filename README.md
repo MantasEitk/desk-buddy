@@ -79,6 +79,17 @@ From then on: everything happens on the Mac (Desk Buddy in the menu bar) or on t
 
 The server keeps everything (tasks, settings, calendar, weather). The Kindle asks it for one screen at a time and sends your taps back; the Mac app connects your computer. Switching between your Mac and the cloud happens in the Mac app, and the Kindle follows by itself.
 
+## How it came about, and the hiccups
+
+I found a 10+ year old Kindle Paperwhite lying around the house and wanted a calm, paper-like screen on my desk for my tasks, instead of another glowing window. Desk Buddy grew from there, with a few bumps along the way:
+
+- **The Kindle kept dropping its USB connection.** Copying anything big made it disconnect and reconnect, and on macOS 26 files sometimes looked copied but were gone after ejecting. So I stopped using USB for anything but the very first install: **Desk Buddy updates itself over Wi-Fi.**
+- **That's really why the cloud option exists.** It's overkill for most people, but running the server on my own (free) Cloudflare account meant I could push new versions to the Kindle over the internet, any time, without plugging it in, and it keeps working while my Mac sleeps. For everyone else, the default runs on your own Mac and needs nothing.
+- **The clock crashed once** because the Kindle is a 32-bit device and a timestamp overflowed. Fixed, and the Kindle now reports a screen that fails to draw instead of falling over.
+- **Deck taps fired late:** tapping tiles I thought were placeholders queued them up and opened apps minutes later. Now a tap only counts for 30 seconds.
+- **Too much e-ink flashing**, so there's a Screen refresh setting (Gentle / Normal / Clean) and it only redraws what changed.
+- **Weak Wi-Fi at the desk** made the Kindle go offline more than once. A router restart fixed it every time (see [Troubleshooting](docs/troubleshooting.md)).
+
 ## Known issues
 
 - **Only the Paperwhite 2** works for now (see [Compatibility](#compatibility)).
