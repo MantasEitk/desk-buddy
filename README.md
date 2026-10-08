@@ -134,7 +134,7 @@ Two things leave your network on purpose: the weather asks [Open-Meteo](https://
 
 ## Credits
 
-[FBInk](https://github.com/NiLuJe/FBInk) by NiLuJe, [KindleModding](https://kindlemodding.org) (jailbreak and the script launcher), [Open-Meteo](https://open-meteo.com), [ical.js](https://github.com/kewisch/ical.js), [go-qrcode](https://github.com/skip2/go-qrcode). Fonts, all under the SIL Open Font License (texts in `kindle/desk/fonts/`): Atkinson Hyperlegible, Literata, Inter, Bitter, Courier Prime, Press Start 2P. Built with [Claude Code](https://claude.com/claude-code).
+[FBInk](https://github.com/NiLuJe/FBInk) by NiLuJe, [KindleModding](https://kindlemodding.org) (jailbreak and the script launcher), [Open-Meteo](https://open-meteo.com), [ical.js](https://github.com/kewisch/ical.js), [go-qrcode](https://github.com/skip2/go-qrcode). Fonts, all under the SIL Open Font License (texts in `kindle/desk/fonts/`): Atkinson Hyperlegible, Literata, Inter, Bitter, Courier Prime, Press Start 2P.
 
 "Kindle" is a trademark of Amazon; Spotify and Apple Music belong to their owners. Desk Buddy isn't affiliated with or endorsed by any of them.
 
