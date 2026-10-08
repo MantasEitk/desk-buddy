@@ -75,9 +75,6 @@ func page(w http.ResponseWriter, r *http.Request) {
 				note = "Couldn't save the settings: " + err.Error()
 				break
 			}
-			if !startsWithWindows() {
-				setStartWithWindows(true) // starts with Windows by default (the tray menu turns it off)
-			}
 			setStatus("Connected")
 		case "pause":
 			setPaused(!current().Paused)
