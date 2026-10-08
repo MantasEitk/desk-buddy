@@ -51,10 +51,10 @@ cat > "$APP/Contents/Info.plist" <<EOF
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
-  <key>NSCalendarsFullAccessUsageDescription</key><string>Desk Buddy shows your calendar events on the Kindle: what's on now, what's next, and a month view.</string>
-  <key>NSCalendarsUsageDescription</key><string>Desk Buddy shows your calendar events on the Kindle.</string>
-  <key>NSAppleEventsUsageDescription</key><string>Desk Buddy shows what's playing in Spotify or Apple Music on the Kindle, and its buttons play, pause and skip.</string>
-  <key>NSBluetoothAlwaysUsageDescription</key><string>Desk Buddy can connect your Bluetooth headphones when you pick them on the Kindle's music screen.</string>
+  <key>NSCalendarsFullAccessUsageDescription</key><string>Desk Buddy shows your events on the Kindle: what's on now, what's next, and a month view. It only reads them, never changes them, and they only go to your own Desk Buddy server.</string>
+  <key>NSCalendarsUsageDescription</key><string>Desk Buddy shows your events on the Kindle. It only reads them, never changes them, and they only go to your own Desk Buddy server.</string>
+  <key>NSAppleEventsUsageDescription</key><string>Desk Buddy shows what's playing in Spotify or Apple Music on the Kindle, with the cover, and makes its play, pause and skip buttons work. It only looks while music is on the Kindle's screen.</string>
+  <key>NSBluetoothAlwaysUsageDescription</key><string>Desk Buddy connects your Bluetooth headphones when you pick them on the Kindle's music screen. It never connects anything you didn't pick.</string>
   <key>LSUIElement</key><true/>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
 </dict></plist>
