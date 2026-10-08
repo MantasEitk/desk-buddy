@@ -1,11 +1,16 @@
-<p align="center"><img src="docs/buddy.png" width="140" alt="Desk Buddy, a smiling book on little feet"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/buddy-dark.png">
+    <img src="docs/buddy.png" width="140" alt="Desk Buddy, a smiling book on little feet">
+  </picture>
+</p>
 
 <h1 align="center">Desk Buddy</h1>
 
 <p align="center"><b>Turn an old jailbroken Kindle into a calm desk companion.</b><br>Your tasks, calendar, weather, music and a clock, on e-ink, next to your computer.</p>
 
 <p align="center">
-<img src="docs/tasks.png" width="49%" alt="Tasks with today's calendar beside them"> <img src="docs/clock-garden.png" width="49%" alt="Standby clock with the Garden theme">
+<img src="docs/tasks.png" width="49%" alt="Tasks with today's calendar beside them"> <img src="docs/clock.png" width="49%" alt="Standby clock with the next event">
 </p>
 
 <p align="center"><a href="#what-you-need">What you need</a> · <a href="#set-up">Set up</a> · <a href="#compatibility">Compatibility</a> · <a href="#known-issues">Known issues</a> · <a href="docs/troubleshooting.md">Troubleshooting</a> · <a href="#privacy">Privacy</a></p>
@@ -26,7 +31,7 @@
 - **Updates itself over Wi-Fi.** You tap Install; it never updates on its own.
 - **Works offline**: the Kindle keeps showing your last screen, and changes you make wait until the server is back.
 
-<p align="center"><img src="docs/calendar.png" width="49%" alt="Calendar tab"> <img src="docs/tasks-dark.png" width="49%" alt="Tasks in dark mode"></p>
+<p align="center"><img src="docs/calendar.png" width="49%" alt="Calendar tab"> <img src="docs/weather.png" width="49%" alt="Weather tab: now, the next 12 hours and the week"></p>
 
 ## What you need
 
