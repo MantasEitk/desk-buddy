@@ -27,6 +27,7 @@
 - **Deck**: tap a tile on the Kindle to open an app on your computer.
 - **Music**: what's playing in Spotify or Apple Music, album covers, play / pause / skip, volume, and which speakers it plays on.
 - **Phone page**: see and change your tasks from your phone. Scan a QR code once.
+- **AI assistants**: let Claude Code or Codex add, tick and change your tasks when you ask ([how](docs/ai-tasks.md)).
 - **Calm e-ink**: light and dark, four fonts, gentle screen refreshes (no needless flashing), a first-run tour.
 - **Updates itself over Wi-Fi.** You tap Install; it never updates on its own.
 - **Works offline**: the Kindle keeps showing your last screen, and changes you make wait until the server is back.
@@ -128,6 +129,7 @@ Two things leave your network on purpose: the weather asks [Open-Meteo](https://
 - [docs/install-kindle.md](docs/install-kindle.md): putting Desk Buddy on the Kindle, using it, updating, removing it
 - [docs/cloud.md](docs/cloud.md): your own free cloud server (optional)
 - [docs/privacy.md](docs/privacy.md): what Desk Buddy sees, why, and where it goes
+- [docs/ai-tasks.md](docs/ai-tasks.md): let an AI assistant manage your tasks
 - [docs/troubleshooting.md](docs/troubleshooting.md): when something doesn't work
 - [docs/building.md](docs/building.md): building it yourself, and how the code is laid out
 - [CONTRIBUTING.md](CONTRIBUTING.md): ideas, bugs and pull requests

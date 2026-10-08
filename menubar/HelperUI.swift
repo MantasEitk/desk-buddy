@@ -84,6 +84,8 @@ final class HelperModel: ObservableObject {
     var onCloudSetup: () -> Void = {}            // open Terminal running setup.sh
     var onCloudPrompt: () -> Void = {}           // copy the AI prompt
     var onCloudScript: () -> Void = {}           // open setup.sh in TextEdit, to read
+    var onCopyAI: () -> Void = {}                // copy the instructions for AI assistants (This Mac)
+    @Published var aiNote = ""
     var onCloudConnect: (String) -> Void = { _ in } // check the address, then switch to it
 }
 
@@ -1002,6 +1004,13 @@ struct HelperWindow: View {
                     : "Your Windows PC is connected too.")
             }
             Row(title: "Tasks page", hint: "Your tasks in a web browser, also on your phone") { Pill(title: "Open") { model.onOpenPage() } }
+            // Let Claude Code / Codex (running on this Mac) change the tasks: instructions to paste
+            // into their instructions file. They read the address and key from Desk Buddy's own file.
+            Row(title: "AI assistants", hint: model.aiNote.isEmpty
+                ? "Let Claude Code or Codex add, tick and change your tasks when you ask. Copy these instructions into their instructions file (Claude Code: ~/.claude/CLAUDE.md, Codex: ~/.codex/AGENTS.md). Your key isn't in them."
+                : model.aiNote) {
+                Pill(title: "Copy instructions") { model.onCopyAI() }
+            }
         }
     }
 }

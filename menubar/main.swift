@@ -348,6 +348,38 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
+    // Instructions for AI assistants on this Mac (This Mac › AI assistants): how to read and change
+    // the tasks through the server's API. The address and key come from Desk Buddy's own settings
+    // file at run time, so they're never pasted anywhere and survive switching Cloud / This Mac.
+    static func aiInstructions() -> String {
+        let file = Backend.file.path.replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
+        return """
+        # Desk Buddy tasks
+
+        My task list lives in Desk Buddy (shown on a Kindle on my desk). When I ask to add, change, tick off, pin, reorder or remove a task, do it through Desk Buddy's API. The Kindle updates within a few seconds.
+
+        - Settings: `\(file)` (JSON). `mode` "local" → server `http://127.0.0.1:\(Backend.port)`; "cloud" → the address in `cloud`. The key is `key`: send it as an `X-Key` header. Never print, log or repeat the key.
+        - Always send a User-Agent (e.g. `curl -A DeskBuddy`): the cloud server blocks some default ones.
+        - Lists ("profile"): `work` = the Mac list, `home` = the Windows list. With one list (setting task_lists = one) it's always `work`. If it's unclear which list, ask.
+        - `GET /api/state`: everything, with each task's `id`.
+        - `POST /api/tasks` `{"profile", "text", "notes"?, "parent_id"?}`: add (`parent_id` makes it a subtask).
+        - `PATCH /api/tasks/<id>` `{"text"?, "notes"?}`: edit.
+        - `POST /api/tasks/<id>/toggle`: tick / untick (its subtasks follow).
+        - `POST /api/tasks/<id>/pin`: make it "Now working on". `POST /api/unpin/<profile>`: unpin.
+        - `POST /api/tasks/<id>/move/up` or `/move/down`.
+        - `DELETE /api/tasks/<id>`: delete (with its subtasks). Ask first.
+
+        Example (read the settings without printing the key):
+
+        ```sh
+        F="\(file.replacingOccurrences(of: "~", with: "$HOME"))"
+        KEY=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['key'])" "$F")
+        SERVER=$(python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print(d['cloud'] if d.get('mode')=='cloud' else 'http://127.0.0.1:\(Backend.port)')" "$F")
+        curl -s -A DeskBuddy -H "X-Key: $KEY" -H "Content-Type: application/json" -d '{"profile":"work","text":"Call Sam"}' "$SERVER/api/tasks"
+        ```
+        """
+    }
+
     // MARK: Cloud / This Mac
 
     var serverLine = ""
@@ -649,6 +681,11 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(CloudGuide.prompt, forType: .string)
                 self?.model.cloudNote = "Prompt copied. Paste it into your AI helper."
+            }
+            model.onCopyAI = { [weak self] in
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(App.aiInstructions(), forType: .string)
+                self?.model.aiNote = "Copied. Paste it into ~/.claude/CLAUDE.md (Claude Code) or ~/.codex/AGENTS.md (Codex)."
             }
             model.onCloudScript = { [weak self] in // to read, never to run: TextEdit
                 guard let kit = try? self?.backend.prepareCloudKit() else { return }

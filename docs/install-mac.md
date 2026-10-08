@@ -43,7 +43,7 @@ Click Desk Buddy in the menu bar (or open it from Applications):
 
 - **Home**: your task list (the one the Kindle shows). Tick, add, rename, drag to reorder, add subtasks.
 - **Kindle**: all the Kindle's settings, from here.
-- **This Mac**: pause Desk Buddy, sync the calendar.
+- **This Mac**: pause Desk Buddy, sync the calendar, and **AI assistants**: instructions so Claude Code or Codex can manage your tasks ([more](ai-tasks.md)).
 - **Server**: where Desk Buddy runs (**This Mac** or your own **Cloud**), the **phone page QR code**, and the guide to your own cloud server.
 - **Permissions**, **Performance** (how little it uses), **About**.
 
