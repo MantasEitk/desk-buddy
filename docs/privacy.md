@@ -34,6 +34,8 @@ The Kindle keeps a copy of its last screen and its own settings on itself, so it
 
 ## Each permission, and why
 
+<p align="center"><img src="mac-permissions.png" width="80%" alt="Desk Buddy for Mac: the Permissions page, with what each permission shares"></p>
+
 macOS asks before Desk Buddy can do any of these. Every one is optional: say no and only that feature is missing. You can change your mind any time in Desk Buddy › **Permissions**, or System Settings › Privacy & Security.
 
 ### Calendars

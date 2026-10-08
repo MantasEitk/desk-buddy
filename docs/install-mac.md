@@ -29,6 +29,8 @@ You can change these any time in the window's **Permissions** page, or in System
 
 ## The window
 
+<p align="center"><img src="mac-home.png" width="80%" alt="Desk Buddy for Mac: Home, the task list"></p>
+
 Click Desk Buddy in the menu bar (or open it from Applications):
 
 - **Home**: your task list (the one the Kindle shows). Tick, add, rename, drag to reorder, add subtasks.

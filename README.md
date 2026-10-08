@@ -33,6 +33,12 @@
 
 <p align="center"><img src="docs/calendar.png" width="49%" alt="Calendar tab"> <img src="docs/weather.png" width="49%" alt="Weather tab: now, the next 12 hours and the week"></p>
 
+## Desk Buddy for Mac
+
+A small app in your menu bar connects your Mac. It runs Desk Buddy's server (so there's nothing else to set up), tells the Kindle when you're at your Mac, sends your calendar and what's playing, and opens apps when you tap the Deck. Its window has your **task list** (drag to reorder, subtasks, pin), **all the Kindle's settings**, the **phone page QR code**, the **permissions** with what each one shares, and how little it uses.
+
+<p align="center"><img src="docs/mac-home.png" width="49%" alt="Desk Buddy for Mac: the task list"> <img src="docs/mac-server.png" width="49%" alt="Desk Buddy for Mac: where it runs, and the phone page QR code"></p>
+
 ## What you need
 
 - **A jailbroken touch Kindle.** Tested on the **Kindle Paperwhite 2** (see [Compatibility](#compatibility)). Jailbreak it with [kindlemodding.org](https://kindlemodding.org), including the hotfix.
