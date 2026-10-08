@@ -11,6 +11,7 @@ import (
 )
 
 type Config struct {
+	Mode   string `json:"mode"` // "local": Desk Buddy runs on this PC; "remote": joined to another computer or the cloud
 	Server string `json:"server"`
 	Key    string `json:"key"`
 	Paused bool   `json:"paused"`
@@ -55,7 +56,13 @@ func saveConfig(c Config) error {
 func current() Config {
 	cfgMu.Lock()
 	defer cfgMu.Unlock()
-	return cfg
+	c := cfg
+	if c.Mode == "" && c.Server != "" {
+		c.Mode = "remote" // 0.1 only knew joining
+	}
+	return c
 }
+
+func local() bool { return current().Mode == "local" }
 
 func connected() bool { c := current(); return c.Server != "" && c.Key != "" }

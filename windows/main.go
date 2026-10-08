@@ -10,13 +10,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	"fyne.io/systray"
 )
 
-const version = "0.1"
+const version = "0.2"
 
 //go:embed icon.ico
 var iconICO []byte
@@ -63,7 +64,12 @@ func logf(format string, a ...any) { log.Printf(format, a...) }
 
 func main() {
 	if !onlyOne() {
-		openPage() // already running: just show it
+		// already running: ask it to show its window
+		if b, err := os.ReadFile(filepath.Join(configDir(), "running.url")); err == nil {
+			if resp, err := quick.Get(strings.Replace(string(b), "/?t=", "/show?t=", 1)); err == nil {
+				resp.Body.Close()
+			}
+		}
 		return
 	}
 	os.MkdirAll(configDir(), 0o700)
@@ -82,10 +88,12 @@ func main() {
 	}()
 	loadConfig()
 	startPage()
+	go keepServer()
+	go watchPairing()
 	go heartbeats()
 	go deck()
 	go appList()
-	systray.Run(onReady, func() {})
+	systray.Run(onReady, stopServer)
 }
 
 func onReady() {
@@ -95,19 +103,19 @@ func onReady() {
 	mStatus = systray.AddMenuItem(status, "")
 	mStatus.Disable()
 	systray.AddSeparator()
-	mOpen := systray.AddMenuItem("Open Desk Buddy…", "Settings and status")
+	mOpen := systray.AddMenuItem("Open Desk Buddy…", "Your tasks, the Kindle's settings, and more")
 	mPause := systray.AddMenuItemCheckbox("Pause", "Stop telling the Kindle about this PC", current().Paused)
 	mLogin := systray.AddMenuItemCheckbox("Start with Windows", "", startsWithWindows())
 	systray.AddSeparator()
-	mQuit := systray.AddMenuItem("Quit Desk Buddy", "")
+	mQuit := systray.AddMenuItem("Quit Desk Buddy", "Stops Desk Buddy on this PC (and its server, if it runs here)")
 	if !connected() {
-		setStatus("Not connected yet")
-		openPage()
+		setStatus("Not set up yet")
 	}
+	openWindow() // like opening an app: show the window (it also says how to set up)
 	for {
 		select {
 		case <-mOpen.ClickedCh:
-			openPage()
+			openWindow()
 		case <-mPause.ClickedCh:
 			setPaused(!current().Paused)
 			if current().Paused {
@@ -126,10 +134,15 @@ func onReady() {
 				mLogin.Uncheck()
 			}
 		case <-mQuit.ClickedCh:
-			systray.Quit()
+			quitApp()
 			return
 		}
 	}
+}
+
+func quitApp() {
+	stopServer()
+	systray.Quit()
 }
 
 func setPaused(p bool) {

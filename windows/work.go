@@ -51,14 +51,14 @@ func heartbeats() {
 // ---- the Deck ----
 
 type deckItem struct {
-	ID        string    `json:"id"`
-	Label     string    `json:"label"`
-	Win       string    `json:"win"`
-	URL       *string   `json:"url"`
-	Media     string    `json:"media"`
-	Switch    string    `json:"switch"`
-	Pomodoro  *pomoInfo `json:"pomodoro"`
-	Wake      bool      `json:"wake"`
+	ID       string    `json:"id"`
+	Label    string    `json:"label"`
+	Win      string    `json:"win"`
+	URL      *string   `json:"url"`
+	Media    string    `json:"media"`
+	Switch   string    `json:"switch"`
+	Pomodoro *pomoInfo `json:"pomodoro"`
+	Wake     bool      `json:"wake"`
 }
 
 type pomoInfo struct {

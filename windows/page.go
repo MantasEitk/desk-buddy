@@ -9,10 +9,14 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"encoding/hex"
+
 	"fmt"
+	"github.com/skip2/go-qrcode"
 	"html"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -34,8 +38,16 @@ func startPage() {
 		return
 	}
 	pageURL = fmt.Sprintf("http://%s/?t=%s", ln.Addr(), token)
+	// for a second copy started later: it asks this one to show its window (see main)
+	os.WriteFile(filepath.Join(configDir(), "running.url"), []byte(pageURL), 0o600)
 	mux := http.NewServeMux()
+	mux.HandleFunc("/show", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("t") == token {
+			openWindow()
+		}
+	})
 	mux.HandleFunc("/", page)
+	uiRoutes(mux)
 	go http.Serve(ln, mux)
 }
 
@@ -70,19 +82,36 @@ func page(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 			c := current()
-			c.Server, c.Key, c.Paused = server, key, false
+			c.Mode, c.Server, c.Key, c.Paused = "remote", server, key, false
 			if err := saveConfig(c); err != nil {
 				note = "Couldn't save the settings: " + err.Error()
 				break
 			}
 			setStatus("Connected")
+		case "local": // run Desk Buddy on this PC
+			c := current()
+			if c.Mode != "local" || c.Key == "" {
+				c.Key = newKey()
+			}
+			c.Mode, c.Server, c.Paused = "local", "http://127.0.0.1:8787", false
+			if err := saveConfig(c); err != nil {
+				note = "Couldn't save the settings: " + err.Error()
+				break
+			}
+			stop = false
+			setStatus("Starting Desk Buddy on this PC…")
+		case "allow", "deny":
+			answerPair(r.FormValue("id"), r.FormValue("do") == "allow")
 		case "pause":
 			setPaused(!current().Paused)
 		case "login":
 			setStartWithWindows(!startsWithWindows())
 		case "disconnect":
+			if local() {
+				stopServer() // the data stays in %APPDATA%\DeskBuddy\server
+			}
 			saveConfig(Config{})
-			setStatus("Not connected")
+			setStatus("Not set up")
 		}
 		if note == "" {
 			http.Redirect(w, r, "/?t="+token, http.StatusSeeOther)
@@ -110,13 +139,15 @@ func pageHTML(note, server string) string {
 		if server == "" {
 			server = c.Server
 		}
-		body = `<h2>Connect this PC</h2>
-<ol><li>On your Mac, open <b>Desk Buddy</b> › <b>This Mac</b> › <b>Connect a computer…</b></li>
+		body = `<h2>Set up Desk Buddy</h2>
+<div class="choice"><div><b>Run Desk Buddy on this PC</b><span>If this is your only computer, or the first one you set up. Nothing else to set up: your Kindle finds this PC on the Wi-Fi.</span></div>` + form("local", "Set up here", true) + `</div>
+<h2 style="margin-top:28px">Or join Desk Buddy on another computer</h2>
+<ol><li>On that computer, open <b>Desk Buddy</b> › <b>This Mac</b> › <b>Connect a computer…</b></li>
 <li>Type the server and the code it shows:</li></ol>
 <form method="post" class="connect"><input type="hidden" name="t" value="` + token + `"><input type="hidden" name="do" value="connect">
-<label>Server<input name="server" value="` + esc(server) + `" placeholder="https://….workers.dev" required></label>
+<label>Server<input name="server" value="` + esc(server) + `" placeholder="https://….workers.dev or 192.168.1.23:8787" required></label>
 <label>Code<input name="code" placeholder="ABCD-1234" required autocomplete="off"></label>
-<button class="pill solid">Connect</button></form>`
+<button class="pill">Join</button></form>`
 		if note != "" {
 			body += `<p class="note">` + esc(note) + `</p>`
 		}
@@ -132,8 +163,24 @@ func pageHTML(note, server string) string {
 		if last != "" {
 			lastRow = `<div class="row"><div><b>Last from the Kindle</b><span>` + esc(last) + `</span></div></div>`
 		}
-		body = `<p class="status">` + esc(st) + `</p>
-<div class="row"><div><b>Server</b><span>` + esc(c.Server) + `</span></div>` + form("disconnect", "Disconnect", false) + `</div>
+		where, phone := c.Server, c.Server
+		if c.Mode == "local" {
+			where, phone = "On this PC ("+lanAddress()+")", lanAddress()
+		}
+		asks := ""
+		for _, p := range pairs() {
+			idf := `<input type="hidden" name="id" value="` + esc(p.ID) + `">`
+			asks += `<div class="ask"><b>` + esc(p.Name) + ` wants to connect</b><span>Check it shows the code <b class="code">` + esc(p.Code) + `</b>. Allowing it lets it show and change your tasks. Only allow a device you own.</span>
+<div class="buttons"><form method="post"><input type="hidden" name="t" value="` + token + `"><input type="hidden" name="do" value="allow">` + idf + `<button class="pill solid">Allow</button></form>
+<form method="post"><input type="hidden" name="t" value="` + token + `"><input type="hidden" name="do" value="deny">` + idf + `<button class="pill">Don't Allow</button></form></div></div>`
+		}
+		qr := ""
+		if png, err := qrcode.Encode(phone+"/app?key="+c.Key, qrcode.Medium, 220); err == nil {
+			qr = `<img class="qr" src="data:image/png;base64,` + base64.StdEncoding.EncodeToString(png) + `" alt="QR code for the phone page" title="Only show it to your own phone">`
+		}
+		body = asks + `<p class="status">` + esc(st) + `</p>
+<div class="row"><div><b>Desk Buddy runs</b><span>` + esc(where) + `</span></div>` + form("disconnect", map[bool]string{true: "Stop and reset", false: "Disconnect"}[c.Mode == "local"], false) + `</div>
+<div class="row"><div><b>Phone page</b><span>Scan with your phone's camera to see and change your tasks there.` + map[bool]string{true: " Works on this Wi-Fi while this PC is on.", false: ""}[c.Mode == "local"] + `</span></div>` + qr + `</div>
 <div class="row"><div><b>Desk Buddy</b><span>Tells the Kindle you're on this PC, opens apps from the Deck, chimes when a focus ends</span></div>` + form("pause", pause, false) + `</div>
 <div class="row"><div><b>Start with Windows</b><span>` + login + `</span></div>` + form("login", map[string]string{"On": "Turn off", "Off": "Turn on"}[login], false) + `</div>` + lastRow + `
 <p class="small">Coming next: music, volume and calendar. Close this tab any time: Desk Buddy keeps running in the taskbar (bottom right).</p>`
@@ -153,13 +200,18 @@ input{font:inherit;padding:8px 2px;border:0;border-bottom:2px solid var(--ink);b
 .pill.solid{background:var(--ink);color:var(--paper)}.connect .pill{justify-self:start;margin-top:6px}
 .row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--line)}
 .row b{display:block}.row span{color:var(--grey);font-size:13px}form{margin:0}
-.status{font-weight:700;font-size:17px}.note{font-weight:700}.small{color:var(--grey);font-size:12px;margin-top:20px}
+.status{font-weight:700;font-size:17px}.choice{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:14px;border:1.5px solid var(--ink);border-radius:10px}.choice b{display:block}.choice span{color:var(--grey);font-size:13px}
+.ask{border:2px solid var(--ink);border-radius:10px;padding:14px;margin-bottom:18px}.ask b{display:block}.ask span{color:var(--grey);font-size:13px}.ask .code{display:inline;font-size:20px;color:var(--ink);letter-spacing:2px}.buttons{display:flex;gap:10px;margin-top:10px}
+.qr{width:120px;height:120px;background:#fff;padding:6px;border-radius:6px}.note{font-weight:700}.small{color:var(--grey);font-size:12px;margin-top:20px}
 </style></head><body><main><header><img class="buddy" src="` + buddy + `" alt=""><h1>Desk Buddy<small>for Windows · ` + version + `</small></h1></header>` + body + `</main></body></html>`
 }
 
 func refresh(on bool) string {
 	if on {
-		return `<meta http-equiv="refresh" content="15">`
+		if len(pairs()) > 0 {
+			return `<meta http-equiv="refresh" content="30">`
+		}
+		return `<meta http-equiv="refresh" content="5">`
 	}
 	return ""
 }

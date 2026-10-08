@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Desk Buddy</title>
+<style>
+:root{--ink:#111;--paper:#fff;--grey:#666;--soft:#999;--line:#e3e3e3;--hover:#f3f3f3;--sel:#111;--selink:#fff;--ok:#1f8f45}
+@media (prefers-color-scheme:dark){:root{--ink:#eee;--paper:#161616;--grey:#aaa;--soft:#777;--line:#2c2c2c;--hover:#222;--sel:#eee;--selink:#161616}.buddy{filter:invert(1)}}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif;display:flex;flex-direction:column;user-select:none}
+header{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-bottom:1px solid var(--line);flex:none;position:relative}
+header img{height:22px}header b{font-size:15px}
+#pause{position:absolute;right:14px;top:9px}
+.wrap{display:flex;flex:1;min-height:0}
+nav{width:210px;flex:none;border-right:1px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+nav button{display:flex;align-items:center;gap:12px;width:100%;padding:8px 12px;border:0;border-radius:8px;background:none;color:var(--ink);font:600 14px inherit;font-family:inherit;cursor:pointer;text-align:left}
+nav button:hover{background:var(--hover)}nav button.on{background:var(--sel);color:var(--selink)}
+nav svg{width:18px;height:18px;flex:none}
+nav .badge{margin-left:auto;background:#d93a35;color:#fff;border-radius:10px;font-size:11px;padding:0 7px}
+main{flex:1;overflow:auto;padding:22px 30px 40px}
+.label{font:700 11px inherit;font-family:inherit;letter-spacing:2.5px;text-transform:uppercase;color:var(--grey);margin:4px 0 10px}
+h1{font-size:26px;margin:0}
+.sub{color:var(--grey);font-size:12.5px}
+.row{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--line)}
+.row .t{flex:1;min-width:0}.row .t b{display:block;font-size:13.5px}.row .t span{color:var(--grey);font-size:12px}
+.seg{display:inline-flex;border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;flex:none}
+.seg button{border:0;background:var(--paper);color:var(--ink);font:600 12.5px inherit;font-family:inherit;padding:6px 14px;cursor:pointer}
+.seg button+button{border-left:1.5px solid var(--ink)}.seg button.on{background:var(--ink);color:var(--paper)}
+.seg.off{opacity:.4;pointer-events:none}
+.pill{border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);font:600 12.5px inherit;font-family:inherit;padding:6px 14px;border-radius:8px;cursor:pointer;flex:none}
+.pill.solid{background:var(--ink);color:var(--paper)}.pill:disabled{opacity:.4}
+select{font:inherit;padding:5px 8px;border:1.5px solid var(--ink);border-radius:8px;background:var(--paper);color:var(--ink)}
+input[type=text]{font:inherit;font-size:15px;border:0;border-bottom:1.5px solid var(--ink);background:none;color:var(--ink);padding:7px 2px;outline:none;width:100%;user-select:text}
+.add{display:flex;gap:10px;align-items:center;margin:16px 0 6px}
+.task{display:flex;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px solid var(--line);position:relative}
+.task.sub{margin-left:36px}
+.task:hover{background:var(--hover)}
+.tick{width:22px;height:22px;border-radius:50%;border:2px solid var(--ink);background:none;flex:none;cursor:pointer;display:grid;place-items:center;padding:0;color:var(--paper)}
+.task.done .tick{background:var(--ink)}
+.task .txt{flex:1;font-size:15px;cursor:default;user-select:text}
+.task.done .txt{text-decoration:line-through;color:var(--soft)}
+.acts{display:none;gap:4px}.task:hover .acts{display:flex}
+.ic{border:0;background:none;color:var(--ink);cursor:pointer;padding:4px 6px;border-radius:6px;font-size:13px}.ic:hover{background:var(--line)}
+.pin{font-size:13px}
+.kindle{margin-top:2px}
+.empty{color:var(--grey);margin-top:14px}
+.ask{border:2px solid var(--ink);border-radius:10px;padding:14px;margin-bottom:18px}
+.ask b{display:block}.ask .code{font:700 22px Consolas,monospace;letter-spacing:3px}
+.box{border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:10px}
+.mono{font-family:Consolas,monospace}
+.qr{width:128px;height:128px;background:#fff;padding:6px;border-radius:6px;flex:none}
+.choice{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:16px;border:1.5px solid var(--ink);border-radius:12px;margin:10px 0}
+.choice b{display:block;font-size:15px}.choice span{color:var(--grey);font-size:13px}
+.setup{max-width:560px;margin:10px auto}
+.center{text-align:center}.big{width:90px}
+.note{font-weight:700;margin-top:8px}
+.ok{color:var(--ok);font-weight:700}
+.hide{display:none!important}
+</style></head><body>
+<header><img class="buddy" src="{{BUDDY}}" alt=""><b>Desk Buddy</b><button id="pause" class="pill hide" onclick="togglePause()">Pause</button></header>
+<div class="wrap">
+<nav id="nav" class="hide">
+<button data-p="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11 12 3l9 8v10h-6v-6H9v6H3z"/></svg>Home</button>
+<button data-p="kindle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="var(--paper)"/><circle cx="15" cy="12" r="2" fill="var(--paper)"/><circle cx="8" cy="18" r="2" fill="var(--paper)"/></svg>Kindle</button>
+<button data-p="pc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg>This PC</button>
+<button data-p="server"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .7-7.9A6 6 0 0 0 6.3 9 4.5 4.5 0 0 0 7 18z"/></svg>Server<span class="badge hide" id="badge"></span></button>
+<button data-p="about"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>About</button>
+</nav>
+<main id="main"></main>
+</div>
+<script>
+const T = new URLSearchParams(location.search).get("t");
+let info = {}, page = "home", list = "home", state = null, settings = {}, kset = null, kstatus = null, chime = true, offer = null, note = "";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function api(method, path, body) {
+  const r = await fetch("/ui" + path + (path.includes("?") ? "&" : "?") + "t=" + T, {method, headers: {"Content-Type": "application/json"}, body: body === undefined ? undefined : JSON.stringify(body)});
+  return r.json().catch(() => ({}));
+}
+async function act(body) { return api("POST", "/do", body); }
+
+async function loadInfo() {
+  info = await (await fetch("/ui/info?t=" + T)).json();
+  $("#nav").classList.toggle("hide", !info.connected);
+  $("#pause").classList.toggle("hide", !info.connected);
+  $("#pause").textContent = info.paused ? "Resume" : "Pause";
+  $("#pause").classList.toggle("solid", info.paused);
+  const n = (info.pairs || []).length;
+  $("#badge").textContent = n; $("#badge").classList.toggle("hide", !n);
+  if (n && page !== "server") { page = "server"; markNav(); }
+}
+async function loadData() {
+  if (!info.connected) return;
+  const [s, st, ks, kst, p] = await Promise.all([api("GET", "/api/state"), api("GET", "/api/settings"), api("GET", "/api/kindle/settings"), api("GET", "/api/kindle/status"), api("GET", "/api/pomodoro")]);
+  if (s.tasks) state = s;
+  if (!st.error) settings = st;
+  kset = ks && ks.values ? ks.values : null;
+  kstatus = kst && !kst.error ? kst : null;
+  if (p && p.sound !== undefined) chime = p.sound;
+}
+function markNav() { document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("on", b.dataset.p === page)); }
+document.querySelectorAll("nav button").forEach((b) => b.onclick = () => { page = b.dataset.p; offer = null; markNav(); render(); });
+
+async function refresh() { await loadInfo(); await loadData(); render(); }
+let editing = false;
+setInterval(async () => { if (!editing && !document.activeElement?.matches("input,select")) await refresh(); }, 5000);
+
+function render() {
+  const m = $("#main");
+  if (!info.connected) { m.innerHTML = setupPage(); return; }
+  m.innerHTML = asks() + ({home: homePage, kindle: kindlePage, pc: pcPage, server: serverPage, about: aboutPage}[page])();
+  if (page === "home") wireHome();
+}
+
+// ---- setting up ----
+function setupPage() {
+  return `<div class="setup"><div class="center"><img class="buddy big" src="{{BUDDY}}" alt=""><h1>Welcome to Desk Buddy</h1>
+<p class="sub">Your tasks, calendar and music on your Kindle, next to this PC.</p></div>
+<div class="choice"><div><b>Run Desk Buddy on this PC</b><span>If this is your only computer, or the first one you set up. Nothing else to set up: your Kindle finds this PC on the Wi-Fi.</span></div><button class="pill solid" onclick="setupLocal()">Set up here</button></div>
+<div class="box"><b>Or join Desk Buddy on another computer</b>
+<p class="sub">On that computer open Desk Buddy › This Mac (or This PC) › <b>Connect a computer…</b>, then type what it shows:</p>
+<label class="sub">Server</label><input type="text" id="srv" placeholder="https://….workers.dev  or  192.168.1.23:8787">
+<label class="sub">Code</label><input type="text" id="code" placeholder="ABCD-1234" autocomplete="off">
+<p><button class="pill" onclick="join()">Join</button></p>${note ? `<p class="note">${esc(note)}</p>` : ""}</div></div>`;
+}
+async function setupLocal() { await act({do: "local"}); note = ""; page = "server"; markNav(); setTimeout(refresh, 1500); await refresh(); }
+async function join() {
+  const r = await act({do: "join", server: $("#srv").value, code: $("#code").value});
+  note = r.error || ""; page = "home"; markNav(); await refresh();
+}
+
+// ---- a device asking to connect ----
+function asks() {
+  return (info.pairs || []).map((p) => `<div class="ask"><b>${esc(p.name)} wants to connect</b>
+<span class="sub">Check it shows this code: </span><span class="code">${esc(p.code)}</span>
+<p class="sub">Allowing it lets it show and change your tasks. Only allow a device you own.</p>
+<button class="pill solid" onclick="answer('${esc(p.id)}',1)">Allow</button> <button class="pill" onclick="answer('${esc(p.id)}',0)">Don't Allow</button></div>`).join("");
+}
+async function answer(id, yes) { await act({do: yes ? "allow" : "deny", id}); await refresh(); }
+async function togglePause() { await act({do: "pause", on: info.paused ? "0" : "1"}); await refresh(); }
+
+// ---- Home: the task list ----
+function oneList() { return (settings.task_lists || "per_computer") === "one"; }
+function homePage() {
+  const l = oneList() ? "work" : list;
+  const tasks = state ? (state.tasks[l] || []) : [];
+  const top = tasks.filter((t) => !t.parent_id).sort((a, b) => a.pos - b.pos);
+  const kids = (id) => tasks.filter((t) => t.parent_id === id).sort((a, b) => a.pos - b.pos);
+  const row = (t, sub) => `<div class="task${t.done ? " done" : ""}${sub ? " sub" : ""}" data-id="${t.id}">
+<button class="tick" title="${t.done ? "Mark not done" : "Done"}" data-a="toggle">${t.done ? "✓" : ""}</button>
+<span class="txt" title="Double-click to rename">${esc(t.text)}</span>${t.pinned ? `<span class="pin" title="Now working on">📌</span>` : ""}
+<span class="acts">${sub ? "" : `<button class="ic" data-a="addsub" title="Add a subtask">＋</button>`}<button class="ic" data-a="pin" title="${t.pinned ? "Unpin" : "Now working on"}">${t.pinned ? "Unpin" : "Pin"}</button><button class="ic" data-a="up" title="Move up">↑</button><button class="ic" data-a="down" title="Move down">↓</button><button class="ic" data-a="del" title="Delete">✕</button></span></div>`;
+  const rows = top.map((t) => row(t, false) + kids(t.id).map((k) => row(k, true)).join("")).join("");
+  const names = {home: "Windows list", work: "Mac list"};
+  const seg = oneList() ? "" : `<span class="seg"><button class="${l === "home" ? "on" : ""}" onclick="list='home';render()">Windows</button><button class="${l === "work" ? "on" : ""}" onclick="list='work';render()">Mac</button></span>`;
+  let kl = "";
+  if (kstatus && kstatus.at) {
+    const ago = Math.round(Date.now() / 1000 - kstatus.at);
+    kl = `On the Kindle · ${kstatus.battery}%${kstatus.charging ? " · charging" : ""} · seen ${ago < 90 ? "just now" : ago < 3600 ? Math.round(ago / 60) + " min ago" : Math.round(ago / 3600) + " h ago"}`;
+  }
+  return `<div style="display:flex;align-items:center;gap:14px"><h1 style="flex:1">${oneList() ? "Tasks" : names[l]}</h1>${seg}</div>
+<div class="sub kindle">${esc(kl)}</div>
+<div class="add"><input type="text" id="newtask" placeholder="Add a task"><button class="pill solid" onclick="addTask()">Add</button></div>
+${rows || `<p class="empty">No tasks yet. Add one above.</p>`}
+<p class="sub" style="margin-top:18px">Double-click a task to rename it. Hover for more.</p>`;
+}
+function wireHome() {
+  $("#newtask")?.addEventListener("keydown", (e) => { if (e.key === "Enter") addTask(); });
+  document.querySelectorAll(".task").forEach((el) => {
+    const id = +el.dataset.id;
+    el.querySelectorAll("[data-a]").forEach((b) => b.onclick = () => taskAct(b.dataset.a, id, el));
+    el.querySelector(".txt").ondblclick = () => rename(id, el);
+  });
+}
+async function addTask() {
+  const v = $("#newtask").value.trim(); if (!v) return;
+  await api("POST", "/api/tasks", {profile: oneList() ? "work" : list, text: v});
+  await refresh(); $("#newtask")?.focus();
+}
+async function taskAct(a, id, el) {
+  const l = oneList() ? "work" : list;
+  if (a === "toggle") await api("POST", `/api/tasks/${id}/toggle`, {});
+  if (a === "pin") await api("POST", el.querySelector(".pin") ? `/api/unpin/${l}` : `/api/tasks/${id}/pin`, {});
+  if (a === "up" || a === "down") await api("POST", `/api/tasks/${id}/move/${a}`, {});
+  if (a === "del" && confirm("Delete this task" + (el.classList.contains("sub") ? "" : " and its subtasks") + "?")) await api("DELETE", `/api/tasks/${id}`, {});
+  if (a === "addsub") return inlineInput(el, "Add a subtask", async (v) => api("POST", "/api/tasks", {profile: l, text: v, parent_id: id}));
+  await refresh();
+}
+function rename(id, el) {
+  const old = el.querySelector(".txt").textContent;
+  inlineInput(el, "", async (v) => { if (v !== old) await api("PATCH", `/api/tasks/${id}`, {text: v}); }, old, true);
+}
+function inlineInput(el, ph, save, value = "", replace = false) {
+  editing = true;
+  const box = document.createElement("div"); box.className = "task" + (replace ? (el.classList.contains("sub") ? " sub" : "") : " sub");
+  box.innerHTML = `<input type="text" placeholder="${ph}" value="${esc(value)}">`;
+  replace ? el.replaceWith(box) : el.after(box);
+  const i = box.querySelector("input"); i.focus(); i.select();
+  const done = async (ok) => { editing = false; const v = i.value.trim(); if (ok && v) await save(v); await refresh(); };
+  i.onkeydown = (e) => { if (e.key === "Enter") done(true); if (e.key === "Escape") done(false); };
+  i.onblur = () => done(true);
+}
+
+// ---- Kindle: its settings ----
+function choice(title, hint, labels, values, cur, set, enabled = true) {
+  const idx = Math.max(0, values.findIndex((v) => String(v) === String(cur)));
+  return `<div class="row"><div class="t"><b>${title}</b><span>${hint}</span></div><span class="seg${enabled ? "" : " off"}">${labels.map((l, i) => `<button class="${i === idx ? "on" : ""}" onclick='${set}(${JSON.stringify(values[i])})'>${l}</button>`).join("")}</span></div>`;
+}
+window.ks = (k) => async (v) => { await api("POST", "/api/kindle/settings", {values: {[k]: v}}); await refresh(); };
+window.bs = (k) => async (v) => { await api("POST", "/api/settings", {key: k, value: v}); await refresh(); };
+window.setChime = async (v) => { await api("POST", "/api/pomodoro", {action: "sound", on: v}); await refresh(); };
+let fid = 0; const fn = (f) => { const n = "f" + (fid++); window[n] = f; return n; };
+function kindlePage() {
+  fid = 0;
+  const k = kset || {}, s = settings, ok = !!kset;
+  const K = (key) => fn(ks(key)), B = (key) => fn(bs(key));
+  const styles = [["plain", "Plain"], ["garden", "Garden"], ["sketch", "Sketch"], ["classic", "Classic"], ["retro", "Retro"], ["notebook", "Notebook"], ["typewriter", "Typewriter"], ["gameboy", "Game Boy"]];
+  const sync = s.music_sync !== false;
+  return `<div class="label">Theme</div>
+<div class="row"><div class="t"><b>Theme</b><span>The look of every screen on the Kindle</span></div><select ${ok ? "" : "disabled"} onchange="${K("style")}(this.value)">${styles.map(([v, l]) => `<option value="${v}"${(k.style || "plain") === v ? " selected" : ""}>${l}</option>`).join("")}</select></div>
+${ok ? "" : `<p class="sub">The Kindle's own settings show up once it has checked in with this version of Desk Buddy.</p>`}
+<div class="label" style="margin-top:22px">Screen</div>
+${choice("Light or dark", k.theme === "auto" ? "Dark when your computer is, else sunset to sunrise" : "Light or dark", ["Light", "Dark", "Auto"], ["light", "dark", "auto"], k.theme, K("theme"), ok)}
+${choice("Night brightness", "Front light while Auto is dark", ["Same", "Off", "Low", "Mid"], [-1, 0, 4, 10], k.night_light, K("night_light"), ok && k.theme === "auto")}
+${choice("Font", "For tasks and headings", ["Sans", "Serif", "Inter", "Bitter"], ["sans", "serif", "inter", "bitter"], k.font, K("font"), ok)}
+${choice("Temperature", "For the weather", ["°C", "°F"], [false, true], k.temp_f, K("temp_f"), ok)}
+${choice("Screen refresh", ["Never flashes; faint ghosts may stay", "Big changes flash, only where they changed", "Every change flashes; sharpest"][Math.min(2, Math.max(0, k.refresh ?? 1))], ["Gentle", "Normal", "Clean"], [0, 1, 2], k.refresh ?? 1, K("refresh"), ok)}
+<div class="label" style="margin-top:22px">Standby clock</div>
+${choice("Clock", "24-hour or 12-hour", ["24h", "12h"], [false, true], k.clock_12h, K("clock_12h"), ok)}
+${choice("Quote", "A line under the clock", ["On", "Off"], [true, false], k.clock_quote, K("clock_quote"), ok)}
+${choice("Next event", "What's on next, under the clock", ["On", "Off"], [true, false], k.clock_event, K("clock_event"), ok)}
+<div class="label" style="margin-top:22px">Meeting heads-up</div>
+${choice("Before meetings", "A card before each event, with Join for Zoom / Meet links", ["On", "Off"], [true, false], k.heads_up, K("heads_up"), ok)}
+${choice("How early", "Minutes before it starts", ["2", "5", "10"], [2, 5, 10], k.heads_up_min, K("heads_up_min"), ok && k.heads_up !== false)}
+<div class="label" style="margin-top:22px">Music</div>
+${choice("Music sync", "Show what's playing on your computer", ["On", "Off"], [true, false], s.music_sync, B("music_sync"))}
+${choice("Music app", "Auto: whichever one is playing", ["Auto", "Spotify", "Apple Music"], ["auto", "spotify", "music"], s.music_app, B("music_app"), sync)}
+${choice("Music app logo", "A small Spotify or Apple Music logo next to the song", ["On", "Off"], [true, false], k.music_logo ?? false, K("music_logo"), ok && sync)}
+${choice("Album covers", "On the music screen", ["On", "Off"], [true, false], s.album_covers, B("album_covers"), sync)}
+<div class="label" style="margin-top:22px">Focus</div>
+${choice("Focus length", "Minutes per Pomodoro", ["25", "45", "50"], [25, 45, 50], s.focus_min, B("focus_min"))}
+${choice("Break length", "Minutes between focuses", ["5", "10", "15"], [5, 10, 15], s.break_min, B("break_min"))}
+${choice("Chime on computer", "Plays when a focus or break ends", ["On", "Off"], [true, false], chime, "setChime")}
+<div class="label" style="margin-top:22px">Tasks</div>
+${choice("Separate lists", (state && (state.computers || []).length < 2) ? "Searching for other devices… connect another computer first" : "Your Mac and Windows PC each get their own tasks", ["On", "Off"], ["per_computer", "one"], s.task_lists, B("task_lists"))}
+${choice("Auto-delete done tasks", "Ticked-off tasks go by themselves", ["On", "Off"], [true, false], s.auto_clear, B("auto_clear"))}
+${choice("Delete after", "How long after you tick them off", ["Instant", "1 min", "5 min", "10 min"], [0, 1, 5, 10], s.auto_clear_min, B("auto_clear_min"), s.auto_clear === true)}
+<div class="label" style="margin-top:22px">Updates</div>
+${choice("Show on main screen", "An Update button at the top when a new version is ready", ["On", "Off"], [true, false], k.update_show, K("update_show"), ok)}
+${choice("Check every", "Downloads over Wi-Fi; installs only when you tap", ["1 hour", "12 hours", "24 hours"], [1, 12, 24], k.update_every, K("update_every"), ok && k.update_show !== false)}`;
+}
+
+// ---- This PC ----
+function pcPage() {
+  fid = 0;
+  const pauseF = fn(async (v) => { await act({do: "pause", on: v ? "1" : "0"}); await refresh(); });
+  const startF = fn(async (v) => { await act({do: "startup", on: v ? "1" : "0"}); await refresh(); });
+  const comps = state ? (state.computers || []) : [];
+  return `<div class="label">This PC</div><h2 style="margin:4px 0 8px">${esc(info.status)}</h2>
+${choice("Desk Buddy", "Tells the Kindle you're using this PC, opens apps from the Deck, chimes when a focus ends", ["On", "Paused"], [false, true], info.paused, pauseF)}
+${choice("Start with Windows", "Opens Desk Buddy in the taskbar when you log in", ["On", "Off"], [true, false], info.startup, startF)}
+${info.last ? `<div class="row"><div class="t"><b>Last from the Kindle</b><span>${esc(info.last)}</span></div></div>` : ""}
+<div class="row"><div class="t"><b>Other computers</b><span>${comps.length < 2 ? "Searching for other devices… Connect another computer to Desk Buddy." : "Your Mac and this PC are both connected."}</span></div><button class="pill" onclick="makeOffer()">Connect a computer…</button></div>
+${offer ? (offer.error ? `<p class="note">${esc(offer.error)}</p>` : `<div class="box"><span class="sub">On the other computer, open Desk Buddy and enter:</span>
+<div style="display:flex;gap:28px;margin-top:6px"><div><span class="sub">Server</span><div class="mono" style="font-weight:700;user-select:text">${esc(offer.server)}</div></div><div><span class="sub">Code</span><div class="mono" style="font-size:22px;font-weight:700;user-select:text">${esc(offer.code)}</div></div></div>
+<span class="sub">The code works once, for 10 minutes.</span></div>`) : ""}
+<div class="row"><div class="t"><b>AI assistants</b><span id="aihint">Let Claude Code or Codex on this PC add, tick and change your tasks when you ask. Copy these instructions into their instructions file (Claude Code: %USERPROFILE%\\.claude\\CLAUDE.md, Codex: %USERPROFILE%\\.codex\\AGENTS.md). Your key isn't in them.</span></div><button class="pill" onclick="copyAI()">Copy instructions</button></div>`;
+}
+async function makeOffer() { offer = await act({do: "offer"}); render(); }
+async function copyAI() {
+  const r = await act({do: "ai"});
+  try { await navigator.clipboard.writeText(r.text); $("#aihint").textContent = "Copied. Paste it into your assistant's instructions file."; }
+  catch { $("#aihint").textContent = "Couldn't copy: " + "your browser blocked it."; }
+}
+
+// ---- Server ----
+function serverPage() {
+  const local = info.mode === "local";
+  return `<div class="label">Server</div>
+<div class="row"><div class="t"><b>Where Desk Buddy runs</b><span>${local ? "On this PC: works while it's on and Desk Buddy is running" : "On another computer or your own cloud server"}</span></div><span class="mono sub" style="user-select:text">${esc(local ? info.lan : info.server)}</span></div>
+<div class="row"><div class="t"><b>On the Kindle</b><span>${local ? "A new Kindle finds this PC on the Wi-Fi (tap Find it): click Allow here when it asks. After that it follows by itself." : "It follows by itself when Desk Buddy moves."}</span></div></div>
+<div class="row"><div class="t"><b>Phone page</b><span>Scan with your phone's camera to see and change your tasks there.${local ? " Works on this Wi-Fi while this PC is on." : ""} Your phone remembers it after that.</span></div>${info.qr ? `<img class="qr" src="${info.qr}" alt="" title="Only show it to your own phone">` : ""}</div>
+<div class="row"><div class="t"><b>${local ? "Stop and reset" : "Disconnect"}</b><span>${local ? "Stops Desk Buddy on this PC. Your tasks stay saved on this PC." : "This PC stops following that server."}</span></div><button class="pill" onclick="if(confirm('Are you sure?'))reset()">${local ? "Stop and reset…" : "Disconnect…"}</button></div>`;
+}
+async function reset() { await act({do: "reset"}); page = "home"; await refresh(); }
+
+// ---- About ----
+function aboutPage() {
+  return `<div class="label">About</div>
+<div style="display:flex;gap:18px;align-items:center;margin:8px 0 14px"><img class="buddy" style="width:64px" src="{{BUDDY}}" alt=""><div><h1>Hi, I'm Desk Buddy</h1><span class="sub">for Windows · ${esc(info.version)}</span></div></div>
+<p>I turn an old Kindle into a calm desk companion: your tasks, calendar, weather and music, on e-ink, next to your computer.</p>
+<div class="row"><div class="t"><b>Your data stays yours</b><span>Everything goes only to your own Desk Buddy server: on this PC, another computer of yours, or your own cloud. No ads, no tracking, no analytics, nothing sold or shared.</span></div></div>
+<div class="row"><div class="t"><b>Coming next</b><span>Music and volume from this PC, and calendar.</span></div></div>
+<div class="row"><div class="t"><b>Quit</b><span>Stops Desk Buddy on this PC until you open it again${info.mode === "local" ? " (the Kindle can't update meanwhile)" : ""}</span></div><button class="pill" onclick="act({do:'quit'})">Quit</button></div>`;
+}
+
+markNav();
+refresh();
+</script>
+</body></html>

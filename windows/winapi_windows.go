@@ -7,6 +7,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"syscall"
 	"unsafe"
 
@@ -96,4 +97,11 @@ func setStartWithWindows(on bool) error {
 		return err
 	}
 	return k.SetStringValue("Desk Buddy", `"`+exe+`"`)
+}
+
+const serverExe = "desk-buddy-server.exe"
+
+// hideWindow: the server is a console program; no black window, please.
+func hideWindow(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000} // CREATE_NO_WINDOW
 }
