@@ -1,0 +1,16 @@
+{
+  "name": "desk-buddy",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build:local": "bun build local/server.js --compile --minify --target=bun-darwin-arm64 --outfile local/dist/desk-buddy-server-arm64 && bun build local/server.js --compile --minify --target=bun-darwin-x64 --outfile local/dist/desk-buddy-server-x64"
+  },
+  "devDependencies": {
+    "bun": "^1.4.2",
+    "wrangler": "^4"
+  },
+  "dependencies": {
+    "ical.js": "^2.2.1"
+  }
+}

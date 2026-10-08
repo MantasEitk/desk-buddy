@@ -1,0 +1,16 @@
+name = "desk-buddy"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# public/kindle/desk-<sha>.bin: the current Kindle app build, served as a plain file
+# (no key; it contains no secrets). release.sh in kindle/desk fills it.
+[assets]
+directory = "./public"
+
+[vars]
+TZ = "UTC" # your time zone, e.g. "Europe/London" or "America/New_York" (setup.sh fills it in)
+
+[[d1_databases]]
+binding = "DB"
+database_name = "desk-buddy"
+database_id = "REPLACE_WITH_YOUR_D1_ID" # or run setup.sh, which makes its own settings

@@ -1,0 +1,14 @@
+# private: your key and your own server settings
+backend/config.json
+kindle/desk/kindle-files/config.json
+worker/.dev.vars
+worker/wrangler.desk-buddy.toml
+# build output and tools
+node_modules/
+.wrangler/
+dist/
+worker/public/kindle/*
+!worker/public/kindle/.gitkeep
+*.sqlite
+*.sqlite-*
+.DS_Store
