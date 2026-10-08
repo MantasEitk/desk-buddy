@@ -98,13 +98,16 @@ Something else? [Open an issue](../../issues).
 
 Your data only goes to **your own** Desk Buddy server: on your Mac (the default), or in your own Cloudflare account if you set one up. There's no Desk Buddy company server, no ads, no tracking, no analytics, and nothing is sold or shared.
 
-Two things leave your network on purpose: the weather asks [Open-Meteo](https://open-meteo.com) for your town's forecast, and some Spotify covers come from Spotify's public link preview.
+Two things leave your network on purpose: the weather asks [Open-Meteo](https://open-meteo.com) for your town's forecast, and album covers come from Spotify.
+
+**Every permission explained** (calendar, music, Bluetooth), what it reads, why, and where it goes: [docs/privacy.md](docs/privacy.md).
 
 ## More
 
 - [docs/install-mac.md](docs/install-mac.md): installing and using the Mac app
 - [docs/install-kindle.md](docs/install-kindle.md): putting Desk Buddy on the Kindle, using it, updating, removing it
 - [docs/cloud.md](docs/cloud.md): your own free cloud server (optional)
+- [docs/privacy.md](docs/privacy.md): what Desk Buddy sees, why, and where it goes
 - [docs/troubleshooting.md](docs/troubleshooting.md): when something doesn't work
 - [docs/building.md](docs/building.md): building it yourself, and how the code is laid out
 - [CONTRIBUTING.md](CONTRIBUTING.md): ideas, bugs and pull requests
