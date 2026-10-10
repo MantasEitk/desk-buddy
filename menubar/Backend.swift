@@ -130,7 +130,14 @@ final class Backend {
             restart = Timer.scheduledTimer(withTimeInterval: 15, repeats: false) { [weak self] _ in self?.startServer() }
             return
         }
-        let bin = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/desk-buddy-server")
+        // the downloaded app carries the server for both chips (package.sh); install.sh one
+        #if arch(arm64)
+        let chip = "arm64"
+        #else
+        let chip = "x64"
+        #endif
+        let both = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/desk-buddy-server-\(chip)")
+        let bin = FileManager.default.fileExists(atPath: both.path) ? both : Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/desk-buddy-server")
         let p = Process()
         p.executableURL = bin
         p.arguments = ["--data", Backend.folder.appendingPathComponent("server").path, "--key", settings.key]

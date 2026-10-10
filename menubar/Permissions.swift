@@ -33,7 +33,10 @@ enum Permissions {
                 default: return .denied
                 }
             },
-            ask: { done in EKEventStore().requestFullAccessToEvents { _, _ in DispatchQueue.main.async(execute: done) } }
+            ask: { done in
+                let store = EKEventStore(), back: EKEventStoreRequestAccessCompletionHandler = { _, _ in DispatchQueue.main.async(execute: done) }
+                if #available(macOS 14, *) { store.requestFullAccessToEvents(completion: back) } else { store.requestAccess(to: .event, completion: back) } // macOS 13
+            }
         ),
         Permission(
             title: "Controlling Spotify",

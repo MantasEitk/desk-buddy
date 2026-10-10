@@ -22,9 +22,9 @@ pkill -f "Desk Buddy.app/Contents/MacOS/desk-buddy-server" 2>/dev/null || true
 
 rm -rf "$APP/Contents" # replace what's inside, keep the app itself (so it stays in the Dock)
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$HOME/Library/LaunchAgents"
-swiftc -O -o "$APP/Contents/MacOS/DeskBuddy" main.swift Backend.swift CalendarSync.swift IconSync.swift Permissions.swift HelperUI.swift
+swiftc -O -o "$APP/Contents/MacOS/DeskBuddy" main.swift Backend.swift CalendarSync.swift IconSync.swift Permissions.swift HelperUI.swift Updater.swift KindleSetup.swift
 swiftc -O -o "$APP/Contents/MacOS/audio-out" AudioOut.swift  # the Mac's sound outputs (Kindle music screen)
-cp ../backend/helper.py AppIcon.icns "$APP/Contents/Resources/"
+cp ../backend/helper.py AppIcon.icns patchnotes.json "$APP/Contents/Resources/"
 # your own settings if you made backend/config.json, else the example (starts on "This Mac")
 if [ -f ../backend/config.json ]; then cp ../backend/config.json "$APP/Contents/Resources/"; else cp ../backend/config.example.json "$APP/Contents/Resources/config.json"; fi
 cp ../brand/menubar.png ../brand/menubar@2x.png "$APP/Contents/Resources/"  # Desk Buddy in the menu bar
@@ -36,11 +36,14 @@ cp ../kindle/desk/fonts/AtkinsonHyperlegible-Regular.ttf ../kindle/desk/fonts/At
 (cd ../worker && npm run --silent build:local >/dev/null)
 cp "../worker/local/dist/desk-buddy-server-$(uname -m | sed 's/x86_64/x64/')" "$APP/Contents/MacOS/desk-buddy-server"
 cp -R ../worker/public "$APP/Contents/Resources/public"
+mkdir -p "$APP/Contents/Resources/kindle-setup" && cp ../kindle/desk/kindle-files/launcher.sh "$APP/Contents/Resources/kindle-setup/"  # Put Desk Buddy on a Kindle (KindleSetup.swift)
 # The cloud setup kit (Server › Your own cloud server): the same server code + setup.sh; the
 # app copies it with Resources/public into Application Support and runs setup.sh there.
 mkdir -p "$APP/Contents/Resources/cloud-kit"
 cp -R ../worker/src ../worker/schema.sql ../worker/setup.sh "$APP/Contents/Resources/cloud-kit/"
 node -e 'const p=require("../worker/package.json");delete p.devDependencies.bun;delete p.scripts;console.log(JSON.stringify(p,null,2))' > "$APP/Contents/Resources/cloud-kit/package.json"
+# the version: the newest in patchnotes.json (About › Updates)
+VERSION=$(python3 -c 'import json;print(json.load(open("patchnotes.json"))[0]["version"])')
 cat > "$APP/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -50,7 +53,7 @@ cat > "$APP/Contents/Info.plist" <<EOF
   <key>CFBundleExecutable</key><string>DeskBuddy</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>NSCalendarsFullAccessUsageDescription</key><string>Desk Buddy shows your events on the Kindle: what's on now, what's next, and a month view. It only reads them, never changes them, and they only go to your own Desk Buddy server.</string>
   <key>NSCalendarsUsageDescription</key><string>Desk Buddy shows your events on the Kindle. It only reads them, never changes them, and they only go to your own Desk Buddy server.</string>
   <key>NSAppleEventsUsageDescription</key><string>Desk Buddy shows what's playing in Spotify or Apple Music on the Kindle, with the cover, and makes its play, pause and skip buttons work. It only looks while music is on the Kindle's screen.</string>

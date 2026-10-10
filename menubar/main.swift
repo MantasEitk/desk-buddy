@@ -3,6 +3,7 @@
 // The menu can pause it, quit it, or uninstall everything (after a warning).
 
 import AppKit
+import ServiceManagement
 import CoreAudio
 import SwiftUI
 
@@ -20,6 +21,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     lazy var backend = Backend(bundledConfig: resource("config.json"))
     lazy var calendar = CalendarSync(server: backend.address, key: backend.settings.key)
     lazy var icons = IconSync(server: backend.address, key: backend.settings.key)
+    var kindleSetup: KindleSetup?
     let pauseItem = NSMenuItem(title: "Pause", action: #selector(togglePause), keyEquivalent: "p")
     var child: Process?
     var childInput: FileHandle?
@@ -47,6 +49,25 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         DistributedNotificationCenter.default().addObserver(forName: .init(agentLabel + ".show"), object: nil, queue: .main) { [weak self] _ in
             self?.showWindow()
         }
+        // Start at login: install.sh sets up a LaunchAgent; a downloaded copy registers itself
+        // as a login item instead (System Settings › General › Login Items can turn it off)
+        if !FileManager.default.fileExists(atPath: agentPlist.path), SMAppService.mainApp.status != .enabled {
+            try? SMAppService.mainApp.register()
+        }
+        // About › Updates: the version and its patch notes; look for a newer one a minute after
+        // starting, then every 6 hours (Updater.swift)
+        model.version = Updater.version
+        // putting Desk Buddy on a Kindle over USB (KindleSetup.swift): set up for where this Mac's
+        // Desk Buddy runs (its address on the Wi-Fi in This Mac mode, else the cloud)
+        kindleSetup = KindleSetup(model: model, resources: Bundle.main.resourceURL!) { [weak self] in
+            guard let b = self?.backend else { return [:] }
+            return ["server": b.local ? b.lanAddress : b.settings.cloud, "key": b.settings.key]
+        }
+        model.onKindleInstall = { [weak self] in self?.kindleSetup?.install() }
+        model.onKindleSaveFiles = { [weak self] in self?.kindleSetup?.saveFiles() }
+        model.notes = Updater.bundledNotes(resource("patchnotes.json"))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { [weak self] in self?.checkUpdate(manual: false) }
+        Timer.scheduledTimer(withTimeInterval: 6 * 3600, repeats: true) { [weak self] _ in self?.checkUpdate(manual: false) }
         let menu = NSMenu()
         let open = NSMenuItem(title: "Open Desk Buddy…", action: #selector(openWindow), keyEquivalent: "w")
         open.target = self
@@ -486,6 +507,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         stop()
         UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier ?? agentLabel)
         try? FileManager.default.removeItem(at: agentPlist)
+        try? SMAppService.mainApp.unregister() // a downloaded copy's login item
         try? FileManager.default.removeItem(at: Bundle.main.bundleURL)
         // Take it out of launchd last: this ends this process too.
         let p = Process()
@@ -556,6 +578,45 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // Home and Kindle sections: the Kindle at a glance and its settings, from the backend
     // (every 10 s while the window is open).
     var currentList = "work"
+
+    var offered: [String: Any]? // the newer version the server offers (its release.json)
+
+    // checkUpdate asks the server for /mac/release.json (manual: from the button, says so if it fails)
+    func checkUpdate(manual: Bool) {
+        if model.updBusy { return }
+        if manual { model.updChecking = true; model.updStatus = "" }
+        backend.send("GET", "/mac/release.json") { [weak self] data in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.model.updChecking = false
+                guard let data, let r = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+                    if manual { self.model.updStatus = "Couldn't reach your Desk Buddy server just now. Try again in a moment." }
+                    return
+                }
+                self.model.updChecked = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
+                self.model.updStatus = ""
+                let v = r["version"] as? String ?? ""
+                if Updater.newer(v, Updater.version) {
+                    self.offered = r
+                    self.model.updVersion = v
+                    let fresh = Updater.entries(r["patchnotes"]).filter { Updater.newer($0.version, Updater.version) }
+                    self.model.updNotes = fresh.isEmpty ? [.init(version: v, date: "", items: r["notes"] as? [String] ?? [])] : fresh
+                    self.model.updCanInstall = r["url"] is String && r["sha256"] is String
+                } else {
+                    self.offered = nil
+                    self.model.updVersion = ""
+                }
+            }
+        }
+    }
+
+    func installUpdate() {
+        guard let r = offered, !model.updBusy else { return }
+        Updater.install(r, server: backend.address, key: backend.settings.key) { [weak self] s, busy in
+            self?.model.updStatus = s
+            self?.model.updBusy = busy
+        }
+    }
 
     func refreshHome() {
         backend.get("/api/desk") { [weak self] data in
@@ -629,11 +690,13 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         kindleStatus = k
         guard (k["seen"] as? Bool) == true, let at = k["at"] as? Double else {
             model.kindleLine = ""
+            model.kindleOnline = false
             updateNeeds()
             return
         }
         let ago = Date().timeIntervalSince1970 - at
         model.kindleSeen = ago < 600
+        model.kindleOnline = ago < 200 // the server notes a quiet Kindle every 2 minutes
         var parts: [String] = []
         if let b = k["battery"] as? Int, b >= 0 { parts.append("\(b)%" + ((k["charging"] as? Bool) == true ? " · charging" : "")) }
         parts.append(ago < 180 ? "seen just now" : ago < 3600 ? "seen \(Int(ago / 60)) min ago" : "last seen \(App.hm(at))")
@@ -775,8 +838,8 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self?.model.chime = on
                 self?.backend.post("/api/pomodoro", ["action": "sound", "on": on])
             }
-            let exe = Bundle.main.executableURL.flatMap { try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate }
-            model.version = exe.map { DateFormatter.localizedString(from: $0, dateStyle: .medium, timeStyle: .none) } ?? ""
+            model.onCheckUpdate = { [weak self] in self?.checkUpdate(manual: true) }
+            model.onInstallUpdate = { [weak self] in self?.installUpdate() }
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 880, height: 660),
                              styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
             w.title = "Desk Buddy"

@@ -25,6 +25,7 @@ final class HelperModel: ObservableObject {
     @Published var showing = ""        // "Mac list"
     @Published var kindleLine = ""     // "86% · charging · seen just now"
     @Published var kindleSeen = true   // checked in within 10 minutes
+    @Published var kindleOnline = false // checked in within the last ~3 minutes (Home's badge)
     @Published var kindleUpdate = false // an update is downloaded, waiting for a tap on the Kindle
     @Published var nowPlaying = ""
     @Published var nextEvent = ""
@@ -61,6 +62,29 @@ final class HelperModel: ObservableObject {
     @Published var perms: [PermRow] = []
     @Published var version = ""
     @Published var computers: [String]? = nil // with the helper: "mac", "pc" (nil: not known yet)
+    // About › Updates (Updater.swift): what came in each version, newest first (bundled), and
+    // what the server offers
+    struct NoteEntry: Identifiable { var id: String { version }; let version, date: String; let items: [String] }
+    @Published var notes: [NoteEntry] = []
+    @Published var notesPage = 0
+    @Published var updVersion = ""          // a newer version on the server, "" when up to date
+    @Published var updNotes: [NoteEntry] = [] // what's new in it (versions newer than this one)
+    @Published var updCanInstall = false    // it comes with a download
+    @Published var updStatus = ""           // "Downloading…", "Couldn't reach…"
+    @Published var updBusy = false
+    @Published var updChecked = ""          // "00:52": the last check that got an answer
+    @Published var updChecking = false
+    @Published var whatsNew = false
+    var onCheckUpdate: () -> Void = {}
+    // Putting Desk Buddy on a Kindle over USB (KindleSetup.swift): "waiting" (no Kindle plugged
+    // in), "found", "copying", "checking", "ejecting", "done", "failed"
+    @Published var kSetupState = "waiting"
+    @Published var kSetupDrive = ""
+    @Published var kSetupHas = false // Desk Buddy is on it already
+    @Published var kSetupNote = ""
+    var onKindleInstall: () -> Void = {}
+    var onKindleSaveFiles: () -> Void = {}
+    var onInstallUpdate: () -> Void = {}
 
     var onPause: (Bool) -> Void = { _ in }
     var onMode: (String) -> Void = { _ in }
@@ -339,6 +363,88 @@ struct CloudGuide: View {
     """
 }
 
+// Put Desk Buddy on a Kindle: plug it in, one click (welcome + Kindle page)
+struct KindleSetupCard: View {
+    @Environment(\.colorScheme) var scheme
+    @ObservedObject var model: HelperModel
+    var body: some View {
+        let c = Ink(scheme: scheme)
+        let st = model.kSetupState
+        let (title, hint): (String, String) = {
+            switch st {
+            case "found": return ("Kindle found", model.kSetupHas
+                ? "Desk Buddy is on it already. This puts the newest version on, set up to connect to this Mac."
+                : "Ready to put Desk Buddy on it, set up to connect to this Mac. It needs the jailbreak with the hotfix (kindlemodding.org).")
+            case "copying": return ("Copying onto the Kindle…", "Don't unplug it. About half a minute.")
+            case "checking": return ("Checking every file landed…", "USB with Kindles sometimes drops files, so it reads them back.")
+            case "ejecting": return ("Ejecting…", "Nearly there.")
+            case "done": return ("Done: unplug the Kindle", (model.kSetupNote.isEmpty ? "" : model.kSetupNote + " ") + "Then open Desk Buddy in the Kindle's library. With the Kindle on your Wi-Fi, it connects to this Mac by itself.")
+            case "failed": return ("That didn't work", model.kSetupNote)
+            default: return ("Put Desk Buddy on a Kindle", "Plug your jailbroken Kindle into this Mac with USB (jailbreak with the hotfix: kindlemodding.org). Desk Buddy copies itself onto it and sets it up to connect here.")
+            }
+        }()
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: st == "done" ? "checkmark.circle" : st == "failed" ? "exclamationmark.triangle" : "cable.connector")
+                    .font(.system(size: 18)).foregroundColor(c.ink).frame(width: 22)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(KD.font(14, bold: true)).foregroundColor(c.ink)
+                    Text(hint).font(KD.font(12)).foregroundColor(c.grey).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            HStack(spacing: 8) {
+                Spacer().frame(width: 26)
+                if st == "found" { Pill(title: "Put Desk Buddy on it", solid: true) { model.onKindleInstall() } }
+                if st == "failed" { Pill(title: "Try again", solid: true) { model.onKindleInstall() } }
+                if ["waiting", "found", "failed"].contains(st) { Pill(title: "Save the files instead…") { model.onKindleSaveFiles() } }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8).stroke(c.line, lineWidth: 1))
+    }
+}
+
+// patch notes: a thin outlined box (About › Updates)
+struct NoteBox<Content: View>: View {
+    @Environment(\.colorScheme) var scheme
+    @ViewBuilder let content: () -> Content
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6, content: content)
+            .padding(.horizontal, 12).padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Ink(scheme: scheme).line, lineWidth: 1))
+            .padding(.top, 10)
+    }
+}
+
+// one version's notes: "Version 1.1 · 9 Oct 2026" and a bullet per item
+struct NoteBlock: View {
+    @Environment(\.colorScheme) var scheme
+    let title, date: String
+    let items: [String]
+    var body: some View {
+        let c = Ink(scheme: scheme)
+        VStack(alignment: .leading, spacing: 4) {
+            if !title.isEmpty {
+                Text(title).font(KD.font(13, bold: true)).foregroundColor(c.ink)
+                    + Text(date.isEmpty ? "" : "  ·  " + NoteBlock.nice(date)).font(KD.font(11)).foregroundColor(c.grey)
+            }
+            ForEach(items, id: \.self) { t in
+                HStack(alignment: .firstTextBaseline, spacing: 7) {
+                    Text("•").font(KD.font(12)).foregroundColor(c.ink)
+                    Text(t).font(KD.font(12)).foregroundColor(c.ink).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+    static func nice(_ d: String) -> String {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
+        guard let t = f.date(from: d) else { return d }
+        return DateFormatter.localizedString(from: t, dateStyle: .medium, timeStyle: .none)
+    }
+}
+
 // a setting: title and a short grey hint on the left, its control on the right, a line under
 struct Row<Trailing: View>: View {
     @Environment(\.colorScheme) var scheme
@@ -590,6 +696,47 @@ struct HelperWindow: View {
     }
 
     // Performance: a verdict in plain words, a light → heavy meter, and the three numbers
+    // About › Updates, like the Kindle's Settings › Updates
+    @ViewBuilder var updatesSection: some View {
+        let ready = !model.updVersion.isEmpty
+        let status = model.updBusy || (!model.updStatus.isEmpty && !ready) ? model.updStatus
+            : ready ? (model.updCanInstall ? "Version \(model.updVersion) is ready. It installs when you click Install, then Desk Buddy restarts." + (model.updStatus.isEmpty ? "" : " " + model.updStatus)
+                                           : "Version \(model.updVersion) is out. It can be installed from here once Desk Buddy is on GitHub.")
+            : !model.updChecked.isEmpty ? "You're up to date (checked at \(model.updChecked))."
+            : "Checked every 6 hours from your Desk Buddy server. It installs only when you click."
+        SpacedLabel(text: "Updates").padding(.top, 8)
+        Row(title: "Version \(model.version)", hint: status) {
+            if model.updBusy {
+                EmptyView()
+            } else if ready {
+                HStack(spacing: 8) {
+                    Pill(title: "What's new?") { model.whatsNew.toggle() }
+                    if model.updCanInstall { Pill(title: "Install", solid: true) { model.onInstallUpdate() } }
+                }
+            } else {
+                Pill(title: model.updChecking ? "Checking…" : "Check for updates") { model.onCheckUpdate() }
+            }
+        }
+        if ready && model.whatsNew && !model.updBusy {
+            NoteBox {
+                ForEach(model.updNotes) { e in NoteBlock(title: "Version \(e.version)", date: e.date, items: e.items) }
+            }
+        }
+        if !model.notes.isEmpty {
+            let i = max(0, min(model.notesPage, model.notes.count - 1))
+            let e = model.notes[i]
+            NoteBox {
+                HStack(spacing: 8) {
+                    NoteBlock(title: i == 0 ? "What's new in this version" : "What came in version \(e.version)", date: e.date, items: [])
+                    Spacer()
+                    Pill(title: "‹") { model.notesPage = i - 1 }.opacity(i > 0 ? 1 : 0.35).disabled(i == 0)
+                    Pill(title: "›") { model.notesPage = i + 1 }.opacity(i < model.notes.count - 1 ? 1 : 0.35).disabled(i >= model.notes.count - 1)
+                }
+                NoteBlock(title: "", date: "", items: e.items)
+            }
+        }
+    }
+
     @ViewBuilder var performancePane: some View {
         let c = Ink(scheme: scheme)
         let cpu = model.perfCPU ?? 0
@@ -691,6 +838,10 @@ struct HelperWindow: View {
         let s = model.settings
         let ks: (String, Any) -> Void = { model.onKindleSetting($0, $1) }
         let bs: (String, Any) -> Void = { model.onSetting($0, $1) }
+        let setupTop = model.kSetupState != "waiting" || model.kindleLine.isEmpty // a Kindle plugged in, or none seen yet
+        if setupTop {
+            KindleSetupCard(model: model).padding(.bottom, 14)
+        }
         if !ok {
             Text("Update the Kindle app (Settings › Updates on the Kindle) to change its screen, clock and heads-up settings here. Music, focus and tasks work already.")
                 .font(KD.font(13)).foregroundColor(c.grey).padding(.bottom, 8).fixedSize(horizontal: false, vertical: true)
@@ -732,6 +883,10 @@ struct HelperWindow: View {
         SpacedLabel(text: "Updates").padding(.top, 22)
         choice("Show on main screen", "An Update button at the top when a new version is ready", ["On", "Off"], [true, false], k["update_show"], enabled: ok) { ks("update_show", $0) }
         choice("Check every", "Downloads over Wi-Fi; installs only when you tap", ["1 hour", "12 hours", "24 hours"], [1, 12, 24], k["update_every"], enabled: ok && (k["update_show"] as? Bool) != false) { ks("update_every", $0) }
+        if !setupTop {
+            SpacedLabel(text: "Another Kindle").padding(.top, 22).padding(.bottom, 10)
+            KindleSetupCard(model: model)
+        }
     }
 
     // Home: the task list the Kindle shows, to edit here (tick, add, rename, pin, move,
@@ -752,8 +907,14 @@ struct HelperWindow: View {
             Spacer()
             Text(model.tasksLine).font(KD.font(12)).foregroundColor(c.grey)
         }
-        Text(model.kindleLine.isEmpty ? "On the Kindle now" : "On the Kindle now · " + model.kindleLine)
-            .font(KD.font(11)).foregroundColor(c.grey).padding(.top, 2)
+        HStack(spacing: 8) {
+            Text(model.kindleLine.isEmpty ? "On the Kindle now" : "On the Kindle now · " + model.kindleLine)
+                .font(KD.font(11)).foregroundColor(c.grey)
+            if !model.kindleLine.isEmpty { // green while the Kindle is in touch
+                Badge(text: model.kindleOnline ? "Kindle connected" : "Kindle offline", ok: model.kindleOnline)
+            }
+        }
+        .padding(.top, 2)
         HStack(spacing: 10) {
             TextField("Add a task", text: $newTask)
                 .textFieldStyle(.plain).font(KD.font(14)).foregroundColor(c.ink)
@@ -985,7 +1146,8 @@ struct HelperWindow: View {
                 }
             }
             .padding(.vertical, 14)
-            Row(title: "Version", hint: "Desk Buddy for Mac") { Text(model.version).font(KD.font(14)).foregroundColor(c.grey) }
+            updatesSection
+            SpacedLabel(text: "Desk Buddy").padding(.top, 22)
             Row(title: "Welcome", hint: "The first-open guide: what it does, permissions, connecting the Kindle") { Pill(title: "Show again") { model.afterUpdate = false; model.welcomeStep = 0 } }
             Row(title: "Quit", hint: "Stops until you open it again, or log in next time") { Pill(title: "Quit") { model.onQuit() } }
             Row(title: "Uninstall", hint: "Removes the helper from this Mac. Asks first.") { Pill(title: "Uninstall…") { model.onUninstall() } }
@@ -1180,7 +1342,8 @@ struct WelcomeView: View {
                 }
                 .padding(.top, 22)
             } else {
-                Text("It hasn't been in touch yet. With Desk Buddy running on your Kindle:")
+                KindleSetupCard(model: model).padding(.top, 14)
+                Text("Desk Buddy already on your Kindle? With it running there:")
                     .font(KD.font(13)).foregroundColor(c.grey).padding(.top, 6).fixedSize(horizontal: false, vertical: true)
                 VStack(alignment: .leading, spacing: 14) {
                     if model.local {

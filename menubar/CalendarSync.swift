@@ -20,7 +20,11 @@ final class CalendarSync {
     }
 
     func start() {
-        store.requestFullAccessToEvents { [weak self] granted, _ in
+        // macOS 14 asks for full access; macOS 13 has the older single kind of access
+        let ask: (@escaping EKEventStoreRequestAccessCompletionHandler) -> Void = { [store] done in
+            if #available(macOS 14, *) { store.requestFullAccessToEvents(completion: done) } else { store.requestAccess(to: .event, completion: done) }
+        }
+        ask { [weak self] granted, _ in
             DispatchQueue.main.async {
                 guard let self else { return }
                 guard granted else {
@@ -46,7 +50,10 @@ final class CalendarSync {
 
     func sync(force: Bool = false) {
         guard enabled else { return }
-        guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else {
+        let status = EKEventStore.authorizationStatus(for: .event)
+        let allowed: Bool
+        if #available(macOS 14, *) { allowed = status == .fullAccess } else { allowed = status == .authorized }
+        guard allowed else {
             onStatus("Calendar: no access · System Settings → Privacy & Security → Calendars")
             return
         }
