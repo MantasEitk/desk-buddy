@@ -419,6 +419,7 @@ func isLocal(act string) bool {
 // run shows the desk until the user leaves (returns 0) or an update is ready (exitUpdate).
 func run(cfg Config, client *Client, statePath, dir string) int {
 	go ensureLibraryItem(dir) // the library's "Desk Buddy" item and its cover (buddy.go)
+	go wifiDiary(dir, client) // why does the Wi-Fi drop? (wifidiary.go)
 	scr := NewScreen(cfg.Rotation, cfg.FullRefreshEvery)
 	taps := make(chan Tap, 8)
 	power := make(chan struct{}, 1)
@@ -1151,6 +1152,7 @@ func run(cfg Config, client *Client, statePath, dir string) int {
 			}
 			if r.err != nil {
 				log.Println("fetch:", r.err)
+				noteFetchErr(r.err) // wifidiary.go
 				nextPoll = time.Now().Add(15 * time.Second)
 				wifi := wifiState()
 				why := explainNetErr(r.err, wifi)
@@ -1253,6 +1255,8 @@ func run(cfg Config, client *Client, statePath, dir string) int {
 			outbox.applyAll(r.d)
 			desk, st.Offline, st.LastOK = r.d, false, r.at
 			tryFlush()
+			sendDiary(client)
+			lastFetchErr = ""
 			checkUpdate(false) // we're online: time to look for a newer build?
 			skew = time.Unix(r.d.Now, 0).Sub(r.at)
 			fetchedAt = r.at.Unix()
@@ -1340,6 +1344,13 @@ func run(cfg Config, client *Client, statePath, dir string) int {
 				fetch()
 			}
 		case <-kick:
+			if pending == 0 {
+				nextPoll = time.Now()
+				fetch()
+			}
+		case <-wifiRedraw: // the Kindle's software was awake for Wi-Fi (wifidiary.go): draw over it
+			scr.ForceFlash()
+			draw(Clean)
 			if pending == 0 {
 				nextPoll = time.Now()
 				fetch()

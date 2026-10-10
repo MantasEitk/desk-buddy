@@ -84,10 +84,13 @@ const ctx = { waitUntil: (p) => Promise.resolve(p).catch((e) => console.error("b
 Bun.serve({
   port,
   hostname: "0.0.0.0",
+  // Bun closes a request after 10 s by default; the Kindle's /api/desk?wait=25 and the
+  // helper's deck wait=20 are held longer, so the Kindle kept going "offline"
+  idleTimeout: 60,
   async fetch(request) {
     const path = new URL(request.url).pathname;
     // the Kindle's updates and the phone page's fonts: plain files, no key (as on Cloudflare)
-    if ((path.startsWith("/kindle/") || path.startsWith("/fonts/") || path.startsWith("/windows/")) && !path.includes("..")) {
+    if ((path.startsWith("/kindle/") || path.startsWith("/fonts/") || path.startsWith("/windows/") || path.startsWith("/mac/")) && !path.includes("..")) {
       const f = Bun.file(join(assets, path));
       if (await f.exists()) return new Response(f);
     }
