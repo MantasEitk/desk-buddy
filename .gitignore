@@ -13,3 +13,4 @@ worker/public/kindle/*
 *.sqlite-*
 .DS_Store
 worker/public/windows/*
+worker/public/mac/*

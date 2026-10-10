@@ -10,12 +10,33 @@
 <p align="center"><b>Turn an old jailbroken Kindle into a calm desk companion.</b><br>Your tasks, calendar, weather, music and a clock, on e-ink, next to your computer.</p>
 
 <p align="center">
+  <a href="../../releases/latest/download/Desk-Buddy-for-Mac.zip"><img src="https://img.shields.io/badge/Download_for_Mac-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac" height="44"></a>
+  &nbsp;
+  <a href="../../releases/latest/download/Desk-Buddy-for-Windows.zip"><img src="https://img.shields.io/badge/Download_for_Windows-000000?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows" height="44"></a>
+</p>
+<p align="center"><sub>The Kindle app comes with it: plug your jailbroken Kindle in and click once. <a href="#download">More download options</a></sub></p>
+
+<p align="center">
 <img src="docs/tasks.png" width="49%" alt="Tasks with today's calendar beside them"> <img src="docs/clock.png" width="49%" alt="Standby clock with the next event">
 </p>
 
-<p align="center"><a href="#what-you-need">What you need</a> · <a href="#set-up">Set up</a> · <a href="#compatibility">Compatibility</a> · <a href="#known-issues">Known issues</a> · <a href="docs/troubleshooting.md">Troubleshooting</a> · <a href="#privacy">Privacy</a></p>
+<p align="center"><a href="#download">Download</a> · <a href="#what-you-need">What you need</a> · <a href="#set-up">Set up</a> · <a href="#compatibility">Compatibility</a> · <a href="#known-issues">Known issues</a> · <a href="docs/troubleshooting.md">Troubleshooting</a> · <a href="#privacy">Privacy</a></p>
 
 ---
+
+## Download
+
+*For the non-smelly nerds.* No code, no building, no terminal. Pick your device, download, open.
+
+| | | |
+|---|---|---|
+| 💻 **Mac** | [**Download Desk Buddy for Mac**](../../releases/latest/download/Desk-Buddy-for-Mac.zip) | Open it and follow the steps. macOS 13 or newer. |
+| 🪟 **Windows** | [**Download Desk Buddy for Windows**](../../releases/latest/download/Desk-Buddy-for-Windows.zip) | Early test version. Unzip and open *Desk Buddy.exe*. |
+| 📖 **Kindle** | **Nothing to download:** Desk Buddy for Mac or Windows puts it on your Kindle | Plug your jailbroken Kindle in with USB and click **Put Desk Buddy on it**. After that it updates itself over Wi-Fi. |
+
+Rather copy it yourself? [Download Desk Buddy for Kindle](../../releases/latest) and follow [the steps](docs/install-kindle.md), or click **Save the files instead…** in the app.
+
+Smelly nerds: the code is all here, and [docs/building.md](docs/building.md) shows how to build it yourself. We love you too.
 
 ## What it does
 
@@ -44,7 +65,7 @@ A small app in your menu bar connects your Mac. It runs Desk Buddy's server (so 
 
 - **A jailbroken touch Kindle.** Tested on the **Kindle Paperwhite 2** (see [Compatibility](#compatibility)). Jailbreak it with [kindlemodding.org](https://kindlemodding.org), including the hotfix.
 - **A Mac** with macOS 13 Ventura or newer. (Windows is on the way.)
-- **A USB cable, once**, to put Desk Buddy on the Kindle. After that it updates over Wi-Fi.
+- **A USB cable, once**: Desk Buddy for Mac or Windows puts Desk Buddy on the Kindle for you. After that it updates over Wi-Fi.
 - **That's it.** No account, no subscription. Desk Buddy runs its own small server on your Mac.
 
 Optional: your own free **Cloudflare** server, so the Kindle and your phone keep working while your Mac sleeps or you're away. See [docs/cloud.md](docs/cloud.md).
@@ -56,8 +77,8 @@ About 15 minutes, once.
 1. **Mac**: download *Desk Buddy for Mac* from [Releases](../../releases) (about 50 MB), move it to Applications and open it. It walks you through what it needs. → [docs/install-mac.md](docs/install-mac.md)
 
    > **Heads-up:** the app isn't signed by Apple (that needs a paid developer membership), so the first time, macOS warns it can't check the app. Allow it once: on macOS 15 and newer in **System Settings › Privacy & Security › Open Anyway**; on macOS 13–14 by **right-clicking › Open**. [Why, and what that means](docs/install-mac.md#before-you-download).
-2. **Kindle**: copy Desk Buddy onto the Kindle over USB, eject, and open **Desk Buddy** from the library. → [docs/install-kindle.md](docs/install-kindle.md)
-3. **Connect them**: on the Kindle tap **Find it**, pick your Mac, and click **Allow** on the Mac.
+2. **Kindle**: plug it into your Mac with USB. Desk Buddy says **Kindle found**: click **Put Desk Buddy on it**. It copies itself over, checks every file landed, and ejects the Kindle. Unplug it and open **Desk Buddy** from the Kindle's library. (Prefer doing it by hand? → [docs/install-kindle.md](docs/install-kindle.md))
+3. **That's it**: it's already set up for your Mac, so it connects by itself. (Copied it by hand? On the Kindle tap **Find it**, pick your Mac, and click **Allow** on the Mac.)
 
 From then on: everything happens on the Mac (Desk Buddy in the menu bar) or on the Kindle itself, and new versions arrive over Wi-Fi.
 
