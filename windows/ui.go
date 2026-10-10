@@ -62,6 +62,13 @@ func uiRoutes(mux *http.ServeMux) {
 		if r, n, busy := updateState(); r != nil || n != "" {
 			info["update"] = map[string]any{"ready": r, "note": n, "busy": busy}
 		}
+		info["notes"] = patchNotes() // About › Updates
+		if connected() {
+			info["ksetup"] = kindleSetupState() // Kindle page: put Desk Buddy on a Kindle (kindlesetup.go)
+		}
+		if t := lastChecked(); !t.IsZero() {
+			info["checked"] = t.Format("15:04")
+		}
 		if !connected() {
 			j, f, busy := joinState()
 			info["joining"], info["found"], info["scanning"] = j, f, busy
@@ -141,6 +148,14 @@ func uiRoutes(mux *http.ServeMux) {
 				srv = lanAddress()
 			}
 			res = map[string]any{"code": o.Code, "server": srv}
+		case "kindleinstall": // put Desk Buddy on the plugged-in Kindle
+			go installKindle()
+		case "kindlesave": // the manual way: a zip in Downloads
+			if p, err := saveKindleFiles(); err != nil {
+				res = map[string]any{"error": "Couldn't save the Kindle files: " + err.Error()}
+			} else {
+				res = map[string]any{"saved": p}
+			}
 		case "update":
 			go applyUpdate()
 		case "checkupdate":

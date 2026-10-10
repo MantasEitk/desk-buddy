@@ -1,0 +1,53 @@
+[
+  {
+    "version": "0.6.1",
+    "date": "2026-10-10",
+    "items": [
+      "Fixed: putting Desk Buddy on a Kindle that had it before keeps its cover in the library"
+    ]
+  },
+  {
+    "version": "0.6",
+    "date": "2026-10-09",
+    "items": [
+      "Added: put Desk Buddy on a Kindle from here: plug it in with USB and click once (Kindle page). It's set up to connect by itself. Or save the files and copy them yourself"
+    ]
+  },
+  {
+    "version": "0.5",
+    "date": "2026-10-09",
+    "items": [
+      "Added: About › Updates: check for updates, see what's new before you install, and look back at what came in each version"
+    ]
+  },
+  {
+    "version": "0.4",
+    "date": "2026-10-09",
+    "items": [
+      "Added: Desk Buddy updates itself (Update Desk Buddy at the bottom of the sidebar)"
+    ]
+  },
+  {
+    "version": "0.3",
+    "date": "2026-10-09",
+    "items": [
+      "Changed: the window matches the Mac app: the same pages and icons, and a sidebar you can fold",
+      "Added: drag and drop in the task list",
+      "Added: Desk Buddy can run on this PC (Server › This PC)"
+    ]
+  },
+  {
+    "version": "0.2",
+    "date": "2026-10-09",
+    "items": [
+      "Added: the Desk Buddy window: your tasks, every Kindle setting, this PC and the server"
+    ]
+  },
+  {
+    "version": "0.1",
+    "date": "2026-10-09",
+    "items": [
+      "First version: connects this PC to the Kindle from the tray (in use, light or dark, the Deck)"
+    ]
+  }
+]

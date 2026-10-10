@@ -11,6 +11,7 @@ cd "$(dirname "$0")"
 go vet . && GOOS=windows GOARCH=amd64 go vet .
 OUT="dist/Desk Buddy for Windows"
 rm -rf dist && mkdir -p "$OUT"
+cp ../kindle/desk/kindle-files/launcher.sh kindle-launcher.sh # the Kindle's library item (kindlesetup.go)
 CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-H=windowsgui" -o "$OUT/Desk Buddy.exe" .
 (cd ../worker && node_modules/.bin/bun build local/server.js --compile --minify --target=bun-windows-x64 --outfile "../windows/$OUT/desk-buddy-server.exe" >/dev/null)
 cp -R ../worker/public "$OUT/public"

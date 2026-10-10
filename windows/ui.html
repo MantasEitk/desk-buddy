@@ -35,6 +35,7 @@ h1{font-size:20px;margin:0;font-weight:700}h2{font-size:16px;margin:4px 0 6px}
 .seg.off{opacity:.4;pointer-events:none}
 .pill{border:1px solid var(--ink);background:var(--paper);color:var(--ink);font-weight:700;font-size:12px;padding:0 12px;min-width:64px;height:26px;border-radius:6px;cursor:pointer;flex:none}
 .pill.solid{background:var(--ink);color:var(--paper)}.pill:disabled{opacity:.4}
+.notebox{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:10px;font-size:13px}.notebox .pill{min-width:30px;padding:0 8px}.notes{margin:6px 0 2px;padding-left:18px}.notes li{margin:3px 0}.notebox b+.notes{margin-top:4px}
 select{font:inherit;font-weight:700;font-size:12px;height:26px;padding:0 6px;border:1px solid var(--ink);border-radius:6px;background:var(--paper);color:var(--ink)}
 input[type=text]{font:inherit;font-size:14px;border:0;border-bottom:1px solid var(--ink);background:none;color:var(--ink);padding:6px 1px;outline:none;width:100%;user-select:text}
 .add{display:flex;gap:10px;align-items:center;margin:14px 0 6px}
@@ -224,7 +225,7 @@ function homePage() {
   const sw = oneList() ? "" : seg(["Windows", "Mac"], ["home", "work"], l, fn((v) => { list = v; render(); }));
   fid = 0;
   return needs.join("") + `<div style="display:flex;align-items:center;gap:14px"><h1 style="flex:1">${oneList() ? "Tasks" : {home: "Windows list", work: "Mac list"}[l]}</h1>${sw}</div>
-<div class="sub">${esc(kl || "On the Kindle now")}</div>
+<div class="sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(kl || "On the Kindle now")}${kstatus ? (Date.now() / 1000 - kstatus.at < 200 ? `<span class="badgeok" style="margin-top:0">✓ Kindle connected</span>` : `<span class="badgegrey" style="margin-top:0">Kindle offline</span>`) : ""}</div>
 <div class="add"><input type="text" id="newtask" placeholder="Add a task"><button class="pill solid" onclick="addTask()">Add</button></div>
 ${rows || `<p class="sub" style="margin-top:12px">No tasks yet. Add one above.</p>`}<div class="endzone" data-end="1"></div>
 <p class="sub" style="margin-top:8px">Drag a task to move it: onto another task to put it in that group, or between tasks. Double-click to rename, hover for more.</p>`;
@@ -290,7 +291,8 @@ function kindlePage() {
   const k = kset || {}, s = settings, ok = !!kset, K = (key) => fn(ks(key)), B = (key) => fn(bs(key)), sync = s.music_sync !== false;
   const styles = [["plain", "Plain"], ["garden", "Garden"], ["sketch", "Sketch"], ["classic", "Classic"], ["retro", "Retro"], ["notebook", "Notebook"], ["typewriter", "Typewriter"], ["gameboy", "Game Boy"]];
   const L = (t, first) => `<div class="label"${first ? "" : ` style="margin-top:22px"`}>${t}</div>`;
-  return L("Theme", 1) + row("Theme", "The look of every screen on the Kindle", `<select ${ok ? "" : "disabled"} onchange="${K("style")}(this.value)">${styles.map(([v, l]) => `<option value="${v}"${(k.style || "plain") === v ? " selected" : ""}>${l}</option>`).join("")}</select>`)
+  const kst = info.ksetup || {state: "waiting"}, setupTop = kst.state !== "waiting" || !kstatus; // a Kindle plugged in, or none seen yet
+  return (setupTop ? kindleSetupCard(kst) + `<div style="height:14px"></div>` : "") + L("Theme", 1) + row("Theme", "The look of every screen on the Kindle", `<select ${ok ? "" : "disabled"} onchange="${K("style")}(this.value)">${styles.map(([v, l]) => `<option value="${v}"${(k.style || "plain") === v ? " selected" : ""}>${l}</option>`).join("")}</select>`)
   + (ok ? "" : `<p class="sub">The Kindle's own settings show up once it has checked in with this version of Desk Buddy.</p>`)
   + L("Screen") + choice("Theme", k.theme === "auto" ? "Dark when your computer is, else sunset to sunrise" : "Light or dark", ["Light", "Dark", "Auto"], ["light", "dark", "auto"], k.theme, K("theme"), ok)
   + choice("Night brightness", "Front light while Auto is dark", ["Same", "Off", "Low", "Mid"], [-1, 0, 4, 10], k.night_light, K("night_light"), ok && k.theme === "auto")
@@ -313,7 +315,29 @@ function kindlePage() {
   + choice("Auto-delete done tasks", "Ticked-off tasks go by themselves", ["On", "Off"], [true, false], s.auto_clear, B("auto_clear"))
   + choice("Delete after", "How long after you tick them off", ["Instant", "1 min", "5 min", "10 min"], [0, 1, 5, 10], s.auto_clear_min, B("auto_clear_min"), s.auto_clear === true)
   + L("Updates") + choice("Show on main screen", "An Update button at the top when a new version is ready", ["On", "Off"], [true, false], k.update_show, K("update_show"), ok)
-  + choice("Check every", "Downloads over Wi-Fi; installs only when you tap", ["1 hour", "12 hours", "24 hours"], [1, 12, 24], k.update_every, K("update_every"), ok && k.update_show !== false);
+  + choice("Check every", "Downloads over Wi-Fi; installs only when you tap", ["1 hour", "12 hours", "24 hours"], [1, 12, 24], k.update_every, K("update_every"), ok && k.update_show !== false)
+  + (setupTop ? "" : L("Another Kindle") + kindleSetupCard(kst));
+}
+
+// Put Desk Buddy on a Kindle: plug it in, one click (kindlesetup.go)
+let ksNote = "";
+function kindleSetupCard(k) {
+  const T = {
+    found: ["Kindle found", k.has ? "Desk Buddy is on it already. This puts the newest version on, set up to connect to this PC." : "Ready to put Desk Buddy on it, set up to connect to this PC. It needs the jailbreak with the hotfix (kindlemodding.org)."],
+    copying: ["Copying onto the Kindle…", "Don't unplug it. About half a minute."],
+    checking: ["Checking every file landed…", "USB with Kindles sometimes drops files, so it reads them back."],
+    done: ["Done: unplug the Kindle", (k.note ? k.note + " " : "") + "Then open Desk Buddy in the Kindle's library. With the Kindle on your Wi-Fi, it connects to this PC by itself."],
+    failed: ["That didn't work", k.note || ""],
+    waiting: ["Put Desk Buddy on a Kindle", "Plug your jailbroken Kindle into this PC with USB (jailbreak with the hotfix: kindlemodding.org). Desk Buddy copies itself onto it and sets it up to connect here."],
+  }[k.state] || ["Put Desk Buddy on a Kindle", ""];
+  const icon = k.state === "done" ? `<path d="m8 12.5 3 3 5-6"/><circle cx="12" cy="12" r="9"/>` : k.state === "failed" ? `<path d="M12 4 2.5 20h19L12 4zM12 10v4.5M12 17.5v.1"/>` : `<path d="M9 3v4M15 3v4M7 7h10v5a5 5 0 0 1-10 0V7zM12 17v4"/>`;
+  const btns = (k.state === "found" ? `<button class="pill solid" onclick="act({do:'kindleinstall'}).then(()=>setTimeout(refresh,300))">Put Desk Buddy on it</button>` : "")
+    + (k.state === "failed" ? `<button class="pill solid" onclick="act({do:'kindleinstall'}).then(()=>setTimeout(refresh,300))">Try again</button>` : "")
+    + (["waiting", "found", "failed"].includes(k.state) ? `<button class="pill" onclick="act({do:'kindlesave'}).then((r)=>{ksNote=r.error||('Saved to '+r.saved);render()})">Save the files instead…</button>` : "");
+  return `<div class="notebox" style="margin-top:0;padding:12px"><div style="display:flex;gap:12px;align-items:flex-start"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px">${icon}</svg>`
+    + `<div style="flex:1"><b style="font-size:14px">${T[0]}</b><div class="sub" style="margin-top:3px">${esc(T[1])}</div>`
+    + (btns ? `<div style="display:flex;gap:8px;margin-top:10px">${btns}</div>` : "")
+    + (ksNote ? `<div class="sub" style="margin-top:8px">${esc(ksNote)}</div>` : "") + `</div></div></div>`;
 }
 
 // ---- This PC ----
@@ -412,13 +436,50 @@ ${tile("Memory", Math.round(mem) + " MB", smem > 0 ? Math.round(smem) + " MB of 
 <p class="sub" style="margin-top:14px">Counting this app${smem > 0 ? " and the server on this PC" : ""}. Updates every 10 seconds; the window itself adds a little.</p>`;
 }
 
+// ---- About › Updates (like the Kindle's Settings › Updates) ----
+let notesPage = 0, whatsNew = false;
+const noteList = (items) => `<ul class="notes">${items.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>`;
+const noteDate = (d) => { const t = new Date(d + "T12:00:00"); return isNaN(t) ? esc(d) : t.toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"}); };
+function updatesSection() {
+  const u = info.update || {}, r = u.ready, notes = info.notes || [];
+  let status, right;
+  if (r && u.busy) { status = esc(u.note); right = ""; }
+  else if (r) {
+    status = "Version " + esc(r.version) + " is ready. It installs when you click Install, then Desk Buddy restarts." + (u.note ? " " + esc(u.note) : "");
+    right = `<span style="display:flex;gap:8px"><button class="pill" onclick="whatsNew=!whatsNew;render()">What's new?</button><button class="pill solid" onclick="act({do:'update'}).then(refresh)">Install</button></span>`;
+  } else {
+    status = u.note === "Couldn't check just now" ? "Couldn't reach your Desk Buddy server just now. Try again in a moment."
+      : info.checked ? "You're up to date (checked at " + esc(info.checked) + ")." : "Checked every 6 hours from your Desk Buddy server. It installs only when you click.";
+    right = `<button class="pill" onclick="this.textContent='Checking…';act({do:'checkupdate'}).then(refresh)">Check for updates</button>`;
+  }
+  let out = `<div class="label" style="margin-top:22px">Updates</div>` + row("Version " + esc(info.version), status, right);
+  if (r && whatsNew && !u.busy) {
+    const fresh = (r.patchnotes || []).filter((e) => newerVersion(e.version, info.version));
+    const list = fresh.length ? fresh : [{version: r.version, items: r.notes || []}];
+    out += `<div class="notebox">${list.map((e) => `<b>Version ${esc(e.version)}</b>${e.date ? ` <span class="sub">· ${noteDate(e.date)}</span>` : ""}${noteList(e.items || [])}`).join("")}</div>`;
+  }
+  if (notes.length) {
+    notesPage = Math.max(0, Math.min(notesPage, notes.length - 1));
+    const e = notes[notesPage];
+    out += `<div class="notebox"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">${notesPage ? "What came in version " + esc(e.version) : "What's new in this version"} <span class="sub" style="font-weight:400">· ${noteDate(e.date)}</span></b>`
+      + `<button class="pill" title="Newer" ${notesPage ? "" : "disabled"} onclick="notesPage--;render()">&lsaquo;</button><button class="pill" title="Older" ${notesPage < notes.length - 1 ? "" : "disabled"} onclick="notesPage++;render()">&rsaquo;</button></div>${noteList(e.items)}</div>`;
+  }
+  return out;
+}
+// "0.10" is newer than "0.9" (as update.go's newer)
+function newerVersion(a, b) {
+  const pa = String(a).split("."), pb = String(b).split(".");
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) { const x = +pa[i] || 0, y = +pb[i] || 0; if (x !== y) return x > y; }
+  return false;
+}
+
 // ---- About ----
 function aboutPage() {
   return `<div class="label">About</div>
 <div style="display:flex;gap:16px;align-items:center;margin:8px 0 12px"><img class="buddy" style="width:60px" src="{{BUDDY}}" alt=""><div><h1>Hi, I'm Desk Buddy</h1><span class="sub">for Windows · ${esc(info.version)}</span></div></div>
 <p style="font-size:13.5px">I turn an old Kindle into a calm desk companion: your tasks, calendar, weather and music, on e-ink, next to your computer.</p>
-${row("Version", "Desk Buddy for Windows", `<span class="sub" style="font-size:13px">${esc(info.version)}</span>`)}
-${row("Updates", (info.update && info.update.note) || (info.update && info.update.ready ? "Version " + esc(info.update.ready.version) + " is ready: Update Desk Buddy at the bottom of the sidebar" : "From your Desk Buddy server, checked every 6 hours. It installs only when you click."), `<button class="pill" onclick="act({do:'checkupdate'}).then(refresh)">Check now</button>`)}
+${updatesSection()}
+<div class="label" style="margin-top:22px">Desk Buddy</div>
 ${row("Quit", "Stops Desk Buddy until you open it again" + (info.mode === "local" ? " (the Kindle can't update meanwhile)" : ""), `<button class="pill" onclick="act({do:'quit'})">Quit</button>`)}
 ${row("Uninstall", "Removes Desk Buddy from this PC: no more starting with Windows, its settings removed. Then delete its folder. Your tasks stay saved.", `<button class="pill" onclick="if(confirm('Uninstall Desk Buddy?\\n\\nIt stops, won\\'t start with Windows any more, and its settings are removed. Its folder opens so you can delete it.'))act({do:'uninstall'})">Uninstall…</button>`)}`;
 }

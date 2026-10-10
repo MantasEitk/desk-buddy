@@ -8,7 +8,9 @@ package main
 
 import (
 	"crypto/sha256"
+	_ "embed"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,18 +24,37 @@ import (
 )
 
 type release struct {
+	Version    string      `json:"version"`
+	SHA256     string      `json:"sha256"`
+	Size       int64       `json:"size"`
+	File       string      `json:"file"`
+	Notes      []string    `json:"notes"`      // the newest version's items (what 0.4 shows)
+	PatchNotes []noteEntry `json:"patchnotes"` // the newest few versions (release.sh, from patchnotes.json)
+}
+
+// noteEntry: one version's patch notes (patchnotes.json, newest first; the first is this version).
+type noteEntry struct {
 	Version string   `json:"version"`
-	SHA256  string   `json:"sha256"`
-	Size    int64    `json:"size"`
-	File    string   `json:"file"`
-	Notes   []string `json:"notes"`
+	Date    string   `json:"date"`
+	Items   []string `json:"items"`
+}
+
+//go:embed patchnotes.json
+var patchNotesJSON []byte
+
+// patchNotes: what came in each version, newest first.
+func patchNotes() []noteEntry {
+	var n []noteEntry
+	json.Unmarshal(patchNotesJSON, &n)
+	return n
 }
 
 var (
-	updMu    sync.Mutex
-	updReady *release
-	updNote  string
-	updBusy  bool
+	updMu      sync.Mutex
+	updReady   *release
+	updNote    string
+	updBusy    bool
+	updChecked time.Time // the last check that got an answer
 )
 
 // newer: "0.10" > "0.9" > "0.3".
@@ -64,6 +85,7 @@ func checkUpdate() error {
 	}
 	updMu.Lock()
 	defer updMu.Unlock()
+	updChecked = time.Now()
 	if r.Version != "" && r.SHA256 != "" && newer(r.Version, version) {
 		updReady = &r
 	} else {
@@ -85,6 +107,13 @@ func updateState() (*release, string, bool) {
 	updMu.Lock()
 	defer updMu.Unlock()
 	return updReady, updNote, updBusy
+}
+
+// lastChecked: when the last check got an answer (zero: not yet).
+func lastChecked() time.Time {
+	updMu.Lock()
+	defer updMu.Unlock()
+	return updChecked
 }
 
 func setUpdNote(s string, busy bool) {

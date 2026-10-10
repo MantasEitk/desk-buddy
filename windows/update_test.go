@@ -12,3 +12,19 @@ func TestNewer(t *testing.T) {
 		}
 	}
 }
+
+// The newest patch notes are for this version, newest first, each with something in it.
+func TestPatchNotes(t *testing.T) {
+	n := patchNotes()
+	if len(n) == 0 || n[0].Version != version {
+		t.Fatalf("patchnotes.json should start with version %s", version)
+	}
+	for i, e := range n {
+		if len(e.Items) == 0 || e.Date == "" {
+			t.Errorf("version %s needs a date and items", e.Version)
+		}
+		if i > 0 && !newer(n[i-1].Version, e.Version) {
+			t.Errorf("%s should come before %s", e.Version, n[i-1].Version)
+		}
+	}
+}
