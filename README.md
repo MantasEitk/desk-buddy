@@ -111,7 +111,11 @@ The server keeps everything (tasks, settings, calendar, weather). The Kindle ask
 
 ## How it came about, and the hiccups
 
-I found a 10+ year old Kindle Paperwhite lying around the house and wanted a calm, paper-like screen on my desk for my tasks, instead of another glowing window. Desk Buddy grew from there, with a few bumps along the way:
+I found a 10+ year old Kindle Paperwhite lying around the house and wanted a calm, paper-like screen on my desk for my tasks, instead of another glowing window.
+
+**A note on AI:** this was a side project, and I'd never programmed a Kindle before, so I built Desk Buddy with the help of AI. That's what made it possible to turn it into something other people can actually use. I designed it and tested it on my own Kindle and computers.
+
+Desk Buddy grew from there, with a few bumps along the way:
 
 - **The Kindle kept dropping its USB connection.** Copying anything big made it disconnect and reconnect, and on macOS 26 files sometimes looked copied but were gone after ejecting. So I stopped using USB for anything but the very first install: **Desk Buddy updates itself over Wi-Fi.**
 - **That's really why the cloud option exists.** It's overkill for most people, but running the server on my own (free) Cloudflare account meant I could push new versions to the Kindle over the internet, any time, without plugging it in, and it keeps working while my Mac sleeps. For everyone else, the default runs on your own Mac and needs nothing.
