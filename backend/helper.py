@@ -235,11 +235,9 @@ def send_cover(a, state):
             tid = music_artwork(src)
             if not tid or not os.path.getsize(src):
                 return False
-            subprocess.run(["sips", "-Z", "320", "-s", "format", "jpeg", "-s", "formatOptions", "70", src, "--out", out],
-                           capture_output=True, timeout=10)
-            if not os.path.exists(out):
+            image = small_cover(src, out)
+            if not image:
                 return False
-            image = base64.b64encode(open(out, "rb").read()).decode()
         call(a, "POST", "/api/music/art", {"key": cover_key(state), "image": image}, timeout=15)
         _cover_sent.update(key=cover_key(state), url="music:" + tid, album=state.get("album"))
         return True
@@ -266,12 +264,27 @@ def send_cover(a, state):
         req = urllib.request.Request(url, headers={"User-Agent": "DeskBuddy-helper/1.0"})
         with urllib.request.urlopen(req, timeout=10) as r, open(src, "wb") as f:
             f.write(r.read(2_000_000))
-        subprocess.run(["sips", "-Z", "320", "-s", "format", "jpeg", "-s", "formatOptions", "70", src, "--out", out],
-                       capture_output=True, timeout=10)
-        image = base64.b64encode(open(out, "rb").read()).decode()
+        image = small_cover(src, out)
+        if not image:
+            return False
     call(a, "POST", "/api/music/art", {"key": cover_key(state), "image": image}, timeout=15)
     _cover_sent.update(key=cover_key(state), url=url, album=state.get("album"))
     return True
+
+
+def small_cover(src, out):
+    """The cover shrunk to a small JPEG, as base64 under the server's limit (60,000
+    characters). Busy covers (e.g. Tame Impala's Currents) stay too big at quality 70, so it
+    steps down; the Kindle shows them in grey, where the difference doesn't show."""
+    for size, quality in (("320", "70"), ("320", "50"), ("320", "35"), ("240", "40")):
+        subprocess.run(["sips", "-Z", size, "-s", "format", "jpeg", "-s", "formatOptions", quality, src, "--out", out],
+                       capture_output=True, timeout=10)
+        if not os.path.exists(out):
+            return ""
+        image = base64.b64encode(open(out, "rb").read()).decode()
+        if len(image) <= 58000:
+            return image
+    return ""
 
 
 def cover_key(state):
