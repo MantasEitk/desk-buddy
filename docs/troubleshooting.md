@@ -1,5 +1,11 @@
 # Troubleshooting
 
+## "Put Desk Buddy on it" doesn't find the Kindle, or the copy fails
+
+- Plug the Kindle straight into the computer (not a hub) and wait until it shows up as a drive called **Kindle**. If Desk Buddy is running on the Kindle, close it first (power button).
+- The app needs a jailbroken Kindle's drive (with its `documents` and `system` folders): a phone or another USB stick won't show up.
+- Still no luck? **Copy it by hand**: [docs/install-kindle.md](install-kindle.md#if-that-doesnt-work-copy-it-by-hand). It takes two minutes.
+
 ## The Kindle can't find my Mac ("No computer found")
 
 - Desk Buddy is open on the Mac (Desk Buddy in the menu bar) and set to **This Mac** (window › Server).

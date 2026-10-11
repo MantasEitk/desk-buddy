@@ -79,7 +79,9 @@ About 15 minutes, once.
 1. **Mac**: download *Desk Buddy for Mac* from [Releases](../../releases) (about 70 MB), move it to Applications and open it. It walks you through what it needs. → [docs/install-mac.md](docs/install-mac.md)
 
    > **Heads-up:** the app isn't signed by Apple (that needs a paid developer membership), so the first time, macOS warns it can't check the app. Allow it once: on macOS 15 and newer in **System Settings › Privacy & Security › Open Anyway**; on macOS 13–14 by **right-clicking › Open**. [Why, and what that means](docs/install-mac.md#before-you-download).
-2. **Kindle**: plug it into your Mac with USB. Desk Buddy says **Kindle found**: click **Put Desk Buddy on it**. It copies itself over, checks every file landed, and ejects the Kindle. Unplug it and open **Desk Buddy** from the Kindle's library. (Prefer doing it by hand? → [docs/install-kindle.md](docs/install-kindle.md))
+2. **Kindle**: plug it into your Mac with USB. Desk Buddy says **Kindle found**: click **Put Desk Buddy on it**. It copies itself over, checks every file landed, and ejects the Kindle. Unplug it and open **Desk Buddy** from the Kindle's library.
+
+   > **Didn't work?** (the app doesn't find the Kindle, or says files didn't stick) Copy it by hand instead: download **Desk-Buddy-for-Kindle.zip** from [Releases](../../releases) (or click **Save the files instead…** in the app), unzip it, copy the **`desk`** folder to the top of the Kindle drive and **`Desk Buddy.sh`** into its **`documents`** folder, then eject. Step by step, with USB tips: [docs/install-kindle.md](docs/install-kindle.md#if-that-doesnt-work-copy-it-by-hand).
 3. **That's it**: it's already set up for your Mac, so it connects by itself. (Copied it by hand? On the Kindle tap **Find it**, pick your Mac, and click **Allow** on the Mac.)
 
 From then on: everything happens on the Mac (Desk Buddy in the menu bar) or on the Kindle itself, and new versions arrive over Wi-Fi.

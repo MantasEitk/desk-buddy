@@ -12,18 +12,32 @@ Follow [kindlemodding.org](https://kindlemodding.org) for your Kindle and firmwa
 
 You don't need KUAL.
 
-## 2. Copy Desk Buddy onto the Kindle (once)
+## 2. Put Desk Buddy on the Kindle (once)
 
-1. Download **Desk Buddy for Kindle** (`.zip`) from [Releases](../../../releases) and unzip it. Inside are a `desk` folder and `documents/Desk Buddy.sh`.
-2. Connect the Kindle to your Mac with USB. It shows up as a drive called **Kindle**.
-3. Copy the **`desk`** folder to the **top level** of the Kindle drive (next to `documents`).
-4. Copy **`Desk Buddy.sh`** into the Kindle's **`documents`** folder.
-5. **Eject** the Kindle (right-click › Eject) before unplugging.
+### The easy way: from the Mac or Windows app
+
+1. Open Desk Buddy on your computer and go to the **Kindle** page.
+2. Connect the Kindle with USB. Desk Buddy says **Kindle found**.
+3. Click **Put Desk Buddy on it**. It copies itself over, checks every file really landed, and ejects the Kindle.
+4. Unplug the Kindle and go to step 3 below. It's already set up for your computer, so it connects by itself.
+
+### If that doesn't work: copy it by hand
+
+If the app doesn't find the Kindle, or says the copy didn't work, do it yourself:
+
+1. Get the files, either way:
+   - in the Desk Buddy app, on the Kindle page, click **Save the files instead…** (already set up for your computer, so the Kindle connects by itself), or
+   - download **Desk-Buddy-for-Kindle.zip** from [Releases](../../../releases) (not set up for your computer: you'll tap **Find it** in step 3).
+2. Unzip it. Inside are a **`desk`** folder and **`documents/Desk Buddy.sh`**.
+3. Connect the Kindle with USB. It shows up as a drive called **Kindle**.
+4. Copy the **`desk`** folder to the **top level** of the Kindle drive (next to `documents`).
+5. Copy **`Desk Buddy.sh`** into the Kindle's **`documents`** folder.
+6. **Eject** the Kindle before unplugging (Mac: right-click › Eject; Windows: the USB icon in the taskbar › Eject Kindle).
 
 **USB tips (especially on macOS 26):** Kindles and newer macOS don't always get along: the drive can disconnect and reconnect, or files can look copied but be gone after ejecting. If that happens:
 - Make sure Desk Buddy isn't running on the Kindle while it's plugged in.
-- Plug the Kindle straight into the Mac (not through a hub) and wait until the drive has stayed connected for ~20 seconds before copying.
-- To stop Spotlight indexing the Kindle (which makes it worse), create an empty file named `.metadata_never_index` at the top level of the Kindle drive (in Terminal: `touch /Volumes/Kindle/.metadata_never_index`).
+- Plug the Kindle straight into the computer (not through a hub) and wait until the drive has stayed connected for ~20 seconds before copying.
+- On a Mac, stop Spotlight indexing the Kindle (which makes it worse): create an empty file named `.metadata_never_index` at the top level of the Kindle drive (in Terminal: `touch /Volumes/Kindle/.metadata_never_index`).
 - After ejecting, plug it back in and check `desk` and `documents/Desk Buddy.sh` are really there.
 
 You only do this once. After this, updates come over Wi-Fi.
@@ -32,8 +46,8 @@ You only do this once. After this, updates come over Wi-Fi.
 
 1. On the Kindle, go to the **Library**. **Desk Buddy** appears there as a book (it can take a moment). Tap it.
 2. The screen switches to Desk Buddy, sideways. (Stand the Kindle on its long side. If everything is upside down, see [Settings file](#the-settings-file).)
-3. A new Kindle doesn't know your Mac yet: tap **Find it**, then pick your Mac.
-4. On the Mac, Desk Buddy asks "A Kindle wants to connect": check the code matches the Kindle's, and click **Allow**.
+3. If you used **Put Desk Buddy on it** or **Save the files instead…**, it connects by itself: you're done. Otherwise it doesn't know your computer yet: tap **Find it**, then pick your computer.
+4. On the computer, Desk Buddy asks "A Kindle wants to connect": check the code matches the Kindle's, and click **Allow**.
 
 That's it. From now on it connects by itself, and follows your Mac if you move Desk Buddy to the cloud.
 
