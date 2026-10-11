@@ -1,8 +1,8 @@
 package main
 
 // The background work, like the Mac's helper.py: tell the server when this PC is being used,
-// wait for Deck taps from the Kindle (open the app), keep the app list current, and chime
-// when a focus or break ends.
+// wait for Deck taps from the Kindle (open the app, or play / pause / skip the music), keep the
+// app list current, and chime when a focus or break ends. Music is in music.go.
 
 import (
 	"os"
@@ -59,6 +59,10 @@ type deckItem struct {
 	Switch   string    `json:"switch"`
 	Pomodoro *pomoInfo `json:"pomodoro"`
 	Wake     bool      `json:"wake"`
+	// music, in every answer: the Kindle shows it now, and Settings › Music
+	MusicWanted bool   `json:"music_wanted"`
+	AlbumCovers *bool  `json:"album_covers"`
+	MusicApp    string `json:"music_app"`
 }
 
 type pomoInfo struct {
@@ -73,25 +77,28 @@ func deck() {
 	for {
 		c := current()
 		if !connected() || c.Paused {
+			musicOff()
 			time.Sleep(3 * time.Second)
 			continue
 		}
 		var it deckItem
 		if err := call(long, "GET", "/api/deck/next?machine=pc&wait=20", nil, &it); err != nil {
+			musicOff()
 			time.Sleep(5 * time.Second) // offline or an old server: don't spin
 			continue
 		}
 		scheduleChime(it.Pomodoro)
+		musicFromDeck(it)
 		if it.ID == "" || it.Wake || it.Switch != "" {
 			continue
 		}
-		var err string
-		switch {
-		case it.Media != "":
-			err = "music controls aren't on Windows yet"
-		default:
-			err = openItem(it)
+		if it.Media != "" { // from the Kindle's music screen (like the Mac, no "done" for these)
+			if err := playMusic(it.Media); err != "" {
+				logf("music %s: %s", it.Media, err)
+			}
+			continue
 		}
+		err := openItem(it)
 		setLast(it.Label, err)
 		call(quick, "POST", "/api/deck/done", map[string]any{"id": it.ID, "ok": err == "", "error": err}, nil)
 	}

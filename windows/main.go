@@ -17,7 +17,7 @@ import (
 	"fyne.io/systray"
 )
 
-const version = "0.6.2"
+const version = "0.7"
 
 //go:embed icon.ico
 var iconICO []byte
@@ -101,6 +101,7 @@ func main() {
 	go heartbeats()
 	go deck()
 	go appList()
+	go watchMusic()
 	systray.Run(onReady, stopServer)
 }
 

@@ -103,7 +103,7 @@ a{color:var(--ink)}summary{cursor:pointer}
 </div>
 <script>
 const T = new URLSearchParams(location.search).get("t");
-let info = {}, page = localStorage.getItem("page") || "home", list = "home", state = null, settings = {}, kset = null, kstatus = null, chime = true, offer = null, note = "", cloudNote = "", aiNote = "";
+let info = {}, page = localStorage.getItem("page") || "home", list = "home", state = null, cals = null, calErrors = [], calAt = 0, calNote = "", calHelp = false, calDraft = {}, settings = {}, kset = null, kstatus = null, chime = true, offer = null, note = "", cloudNote = "", aiNote = "";
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 try { if (localStorage.getItem("folded") === "1") document.body.classList.add("folded"); } catch {}
@@ -122,7 +122,7 @@ async function loadInfo() {
   p.classList.toggle("hide", !info.connected);
   p.classList.toggle("on", !!info.paused);
   p.innerHTML = info.paused ? "&#9654; Resume" : "&#10074;&#10074; Pause";
-  p.title = info.paused ? "Connect this PC to the Kindle again" : "Stop this PC talking to the Kindle: no Deck, chime or \"in use\" until you resume";
+  p.title = info.paused ? "Connect this PC to the Kindle again" : "Stop this PC talking to the Kindle: no Deck, music, chime or \"in use\" until you resume";
   const u = info.update || {};
   $("#updbtn").classList.toggle("hide", !u.ready);
   if (u.ready) $("#updsub").textContent = u.busy ? u.note : "Version " + u.ready.version + " is ready";
@@ -143,6 +143,14 @@ async function loadData() {
   kstatus = kst && !kst.error && kst.at ? kst : null;
   if (p && p.sound !== undefined) chime = p.sound;
   badge("bk", kstatus && kstatus.up_to_date === false ? 1 : 0, "kindle");
+  if ((page === "pc" || page === "permissions") && Date.now() - calAt > 30000) await loadCalendars();
+}
+// the calendar links (This PC › Calendar), every 30 s while that page is open
+async function loadCalendars() {
+  calAt = Date.now();
+  const [c, e] = await Promise.all([api("GET", "/api/calendars"), api("GET", "/api/calendar?from=1&to=2")]);
+  if (Array.isArray(c)) cals = c;
+  calErrors = e && Array.isArray(e.errors) ? e.errors : [];
 }
 function markNav() { document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("on", b.dataset.p === page)); try { localStorage.setItem("page", page); } catch {} }
 document.querySelectorAll("nav button").forEach((b) => b.onclick = () => { page = b.dataset.p; offer = null; markNav(); render(); });
@@ -345,15 +353,50 @@ function pcPage() {
   fid = 0;
   const comps = state ? (state.computers || []) : [];
   return `<div class="label">This PC</div><h2>${esc(info.status)}</h2>`
-  + choice("Desk Buddy", "Tells the Kindle you're using this PC, opens apps from the Deck, chimes when a focus ends", ["On", "Paused"], [false, true], info.paused, fn(async (v) => { await act({do: "pause", on: v ? "1" : "0"}); await refresh(); }))
+  + choice("Desk Buddy", "Tells the Kindle you're using this PC, opens apps from the Deck, shows your music, chimes when a focus ends", ["On", "Paused"], [false, true], info.paused, fn(async (v) => { await act({do: "pause", on: v ? "1" : "0"}); await refresh(); }))
   + choice("Start with Windows", "Opens Desk Buddy in the taskbar when you log in", ["On", "Off"], [true, false], info.startup, fn(async (v) => { await act({do: "startup", on: v ? "1" : "0"}); await refresh(); }))
   + (info.last ? row("Last from the Kindle", esc(info.last)) : "")
   + row("Other computers", comps.length < 2 ? "Searching for other devices… Connect another computer to Desk Buddy." : "Your Mac and this PC are both connected.", `<button class="pill" onclick="makeOffer()">Connect a computer…</button>`)
   + (offer ? (offer.error ? `<p class="note">${esc(offer.error)}</p>` : `<div class="box"><span class="sub">On the other computer, open Desk Buddy. On the same Wi-Fi it finds this one by itself; otherwise enter:</span>
 <div style="display:flex;gap:28px;margin-top:6px"><div><span class="sub">Server</span><div class="mono" style="font-weight:700;user-select:text">${esc(offer.server)}</div></div><div><span class="sub">Code</span><div class="code" style="user-select:text">${esc(offer.code)}</div></div></div>
 <span class="sub">The code works once, for 10 minutes. The computer then connects by itself.</span></div>`) : "")
+  + calendarSection(comps.length > 1)
   + row("Tasks page", "Your tasks in a web browser, also on your phone", `<button class="pill" onclick="act({do:'openpage'})">Open</button>`)
   + row("AI assistants", `<span id="aihint">${aiNote || "Let Claude Code or Codex on this PC add, tick and change your tasks when you ask. Copy these instructions into their instructions file (Claude Code: %USERPROFILE%\\.claude\\CLAUDE.md, Codex: %USERPROFILE%\\.codex\\AGENTS.md). Your key isn't in them."}</span>`, `<button class="pill" onclick="copyText('ai')">Copy instructions</button>`);
+}
+// Calendar: Windows has no calendar Desk Buddy can read like the Mac's, so calendars come in by
+// their private link (Google, Outlook…). Your Desk Buddy server reads the links itself.
+function calendarSection(two) {
+  const where = {both: "Both lists", home: "Windows list", work: "Mac list"};
+  const list = (cals || []).map((c, i) => row(esc(c.name), two ? where[c.profile] || "Both lists" : "On the Kindle",
+    `<button class="pill" onclick="removeCal(${i})">Remove</button>`)).join("");
+  const opts = two ? `<select id="calshow" aria-label="Show on"><option value="both">Both lists</option><option value="home">Windows list</option><option value="work">Mac list</option></select>` : "";
+  return `<div class="label" style="margin-top:22px">Calendar</div>`
+  + row("Your calendar on the Kindle", "Today's events, the month, a heads-up before meetings. Add your calendar by its private link; it updates every 10 minutes.")
+  + (cals === null ? `<p class="sub">Loading…</p>` : list)
+  + (calErrors.length ? `<p class="note">Couldn't load: ${esc(calErrors.join("; "))}</p>` : "")
+  + `<div class="box"><div style="display:flex;gap:12px;align-items:center">
+<input type="text" id="calname" value="${esc(calDraft.name)}" placeholder="Name (like Work)" maxlength="30" style="flex:1" aria-label="Calendar name">${opts}</div>
+<div class="add" style="margin-top:8px"><input type="text" id="calurl" value="${esc(calDraft.url)}" placeholder="Paste the link (https://… or webcal://…)" aria-label="Calendar link"><button class="pill solid" onclick="addCal()">Add</button></div>
+${calNote ? `<p class="note">${esc(calNote)}</p>` : ""}
+<details style="margin-top:6px"${calHelp ? " open" : ""} ontoggle="calHelp=this.open"><summary class="sub">Where do I find the link?</summary>
+<p class="sub" style="margin:6px 0 2px"><b>Google Calendar</b> (on the web): Settings › your calendar › <b>Secret address in iCal format</b>.</p>
+<p class="sub" style="margin:2px 0"><b>Outlook</b> (on the web): Settings › Calendar › Shared calendars › Publish a calendar › pick it, Can view all details, Publish › copy the <b>ICS</b> link.</p>
+<p class="sub" style="margin:2px 0">Keep the link private: anyone with it can see your events.</p></details></div>`;
+}
+async function addCal() {
+  const url = $("#calurl").value.trim(), name = $("#calname").value.trim();
+  if (!url) { calNote = "Paste your calendar's link first."; render(); return; }
+  calDraft = {name, url}; calNote = "Adding…"; render();
+  const r = await api("POST", "/api/calendars", {name: name || "Calendar", url, profile: $("#calshow")?.value || "both"});
+  calNote = r.error ? String(r.error).replace(/^server said [^:]*: /, "") : "";
+  if (!r.error) calDraft = {};
+  await loadCalendars(); render();
+}
+async function removeCal(i) {
+  if (!confirm("Remove " + ((cals || [])[i]?.name || "this calendar") + " from Desk Buddy?")) return;
+  await api("DELETE", "/api/calendars/" + i);
+  await loadCalendars(); render();
 }
 async function makeOffer() { offer = await act({do: "offer"}); render(); }
 async function copyText(what) {
@@ -412,8 +455,8 @@ function permissionsPage() {
 <p class="sub">Windows doesn't ask apps for these one by one like a Mac does. Here's everything Desk Buddy uses on this PC, and what it shares.</p></div>
 ${perm("⌨", "When you're at this PC", "How long since you last touched the keyboard or mouse (a number of seconds, never what you typed), and light or dark mode", "\"in use\" and light / dark, with your Desk Buddy server, so the Kindle shows the Windows list", ok("Always on"))}
 ${perm("▦", "Opening apps", "Apps from your Start menu, by name, when you tap a Deck tile; meeting links from Join", "the names of your Start menu apps, so the Kindle can list them", ok("Always on"))}
-${perm("♪", "Music", "What's playing, covers, play / pause / skip", "the song playing, only while music shows on the Kindle", grey("Coming soon"))}
-${perm("📅", "Calendar", "Your events on the Kindle", "your events, with your Desk Buddy server", grey("Coming soon: calendar links already work on the phone page"))}
+${perm("♪", "Music", "What's playing in Spotify, Apple Music or your browser (from Windows' media controls), its cover, play / pause / skip, the volume and where the sound goes", "the song playing and its cover, only while music shows on the Kindle", settings.music_sync === false ? grey("Off: Kindle › Music sync") : ok("On"))}
+${perm("📅", "Calendar", "Your events on the Kindle, from the calendar links you add in This PC › Calendar", "nothing from this PC: your Desk Buddy server reads the links itself", cals && cals.length ? ok(cals.length + (cals.length === 1 ? " calendar" : " calendars")) : grey("Add one in This PC"))}
 ${local ? perm("🛜", "Incoming connections", "So the Kindle and your phone can reach Desk Buddy on this PC over your Wi-Fi (Windows asks once: allow it on private networks)", "nothing: devices only get in with your key, or when you click Allow", ok("Needed for This PC")) : ""}
 <p class="sub" style="margin-top:12px">Everything Desk Buddy does is open source on GitHub.</p>`;
 }

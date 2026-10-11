@@ -205,7 +205,7 @@ func uiRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/ui/api/", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/ui")
 		allowed := false
-		for _, p := range []string{"/api/state", "/api/desk", "/api/tasks", "/api/unpin/", "/api/settings", "/api/kindle/settings", "/api/kindle/status", "/api/pomodoro"} {
+		for _, p := range []string{"/api/state", "/api/desk", "/api/tasks", "/api/unpin/", "/api/settings", "/api/kindle/settings", "/api/kindle/status", "/api/pomodoro", "/api/calendars", "/api/calendar"} {
 			if path == p || strings.HasPrefix(path, p+"/") || (strings.HasSuffix(p, "/") && strings.HasPrefix(path, p)) {
 				allowed = true
 			}
@@ -222,6 +222,11 @@ func uiRoutes(mux *http.ServeMux) {
 			} else {
 				body = map[string]any{}
 			}
+		}
+		q := r.URL.Query() // e.g. ?from=…&to=… (not the window's token)
+		q.Del("t")
+		if len(q) > 0 {
+			path += "?" + q.Encode()
 		}
 		var out any
 		if err := call(quick, r.Method, path, body, &out); err != nil {
@@ -267,10 +272,6 @@ My task list lives in Desk Buddy (shown on a Kindle on my desk). When I ask to a
 - ` + "`POST /api/tasks/<id>/toggle`" + `: tick / untick (subtasks follow). ` + "`POST /api/tasks/<id>/pin`" + `: "Now working on". ` + "`POST /api/unpin/<profile>`" + `.
 - ` + "`POST /api/tasks/<id>/move/up`" + ` or ` + "`/move/down`" + `. ` + "`DELETE /api/tasks/<id>`" + ` (with its subtasks; ask first).
 
-Example (PowerShell, without printing the key):
-
-` + "```powershell" + `
-$c = Get-Content "$env:APPDATA\DeskBuddy\config.json" | ConvertFrom-Json
-Invoke-RestMethod -Method Post -Uri "$($c.server)/api/tasks" -UserAgent DeskBuddy -Headers @{ "X-Key" = $c.key } -ContentType "application/json" -Body '{"profile":"home","text":"Call Sam"}'
-` + "```\n"
+To add a task: read ` + "`server`" + ` and ` + "`key`" + ` from that settings file (without printing the key), then POST ` + "`{\"profile\":\"home\",\"text\":\"Call Sam\"}`" + ` to ` + "`<server>/api/tasks`" + ` with the key in an ` + "`X-Key`" + ` header and the User-Agent ` + "`DeskBuddy`" + `.
+`
 }

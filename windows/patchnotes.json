@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.7",
+    "date": "2026-10-11",
+    "items": [
+      "Added: music from this PC on the Kindle: Spotify, Apple Music, browsers and more, with album covers and play / pause / skip",
+      "Added: change the PC's volume and sound output from the Kindle",
+      "Added: your calendars on the Kindle: add your Google or Outlook calendar link in This PC › Calendar"
+    ]
+  },
+  {
     "version": "0.6.2",
     "date": "2026-10-11",
     "items": [
