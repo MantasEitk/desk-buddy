@@ -4,6 +4,7 @@ package main
 // local one): connect with a one-time code, check in as the PC, send the app list, and a Deck tap.
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -46,9 +47,26 @@ func TestFlow(t *testing.T) {
 	if err := call(quick, "POST", "/api/heartbeat", map[string]any{"machine": "pc", "idle": 5.0, "dark": false}, &hb); err != nil || hb.Profile == "" {
 		t.Fatal("heartbeat:", err, hb)
 	}
-	// the app list
-	if err := call(quick, "POST", "/api/deck/icons", map[string]any{"machine": "pc", "icons": map[string]string{}, "apps": []string{"Notepad", "Spotify"}}, nil); err != nil {
-		t.Fatal("apps:", err)
+	// the app list (an old helper's, then Windows' whole "All apps", which picks the PC's
+	// first favourites from it, once, and leaves the Mac's alone)
+	type tile struct{ Label, Win, App string }
+	var deck, before struct{ Work, Home []tile }
+	call(quick, "GET", "/api/deck", nil, &before)
+	var r struct{ Seeded bool }
+	if err := call(quick, "POST", "/api/deck/icons", map[string]any{"machine": "pc", "icons": map[string]string{}, "apps": []string{"Notepad", "Spotify"}}, &r); err != nil || r.Seeded {
+		t.Fatal("apps:", err, r.Seeded)
+	}
+	list := map[string]any{"machine": "pc", "icons": map[string]string{}, "apps": []string{"Notepad", "Spotify", "Google Chrome", "Paint 3D", "Outlook (new)"}, "all_apps": true}
+	if err := call(quick, "POST", "/api/deck/icons", list, &r); err != nil || !r.Seeded {
+		t.Fatal("apps:", err, r.Seeded)
+	}
+	call(quick, "GET", "/api/deck", nil, &deck)
+	want := []tile{{"Spotify", "Spotify", ""}, {"Chrome", "Google Chrome", ""}, {"Outlook", "Outlook (new)", ""}, {"Notepad", "Notepad", ""}}
+	if fmt.Sprint(deck.Home) != fmt.Sprint(want) || fmt.Sprint(deck.Work) != fmt.Sprint(before.Work) {
+		t.Fatalf("first favourites: %v (Mac's %d, was %d)", deck.Home, len(deck.Work), len(before.Work))
+	}
+	if err := call(quick, "POST", "/api/deck/icons", list, &r); err != nil || r.Seeded {
+		t.Fatal("favourites should only be picked once:", err)
 	}
 	// a meeting link check
 	if openItem(deckItem{URL: ptr("https://evil.example.com/x")}) == "" || openItem(deckItem{URL: ptr("https://zoom.us/j/123")}) != "" {

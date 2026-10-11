@@ -3,8 +3,9 @@
 package main
 
 // One thread for Windows' media and sound calls (COM, the way Windows apps talk to these
-// parts of Windows, wants its calls on a thread that's set up for it). The rest of the app hands
-// it small jobs and waits for them, never longer than 10 seconds.
+// parts of Windows, wants its calls on a thread that's set up for it), and one for the apps
+// list and icons (the Start menu's parts of Windows want a thread of their own kind). The rest
+// of the app hands them small jobs and waits for them, never longer than 10 seconds.
 
 import (
 	"errors"
@@ -18,19 +19,36 @@ import (
 	"github.com/saltosystems/winrt-go/windows/foundation"
 )
 
+var errBusy = errors.New("Windows didn't answer in time")
+
+type comThread struct {
+	name  string
+	mode  uint32 // how COM is set up on it
+	jobs  chan func()
+	start chan struct{}
+}
+
+func newCOMThread(name string, mode uint32) *comThread {
+	t := &comThread{name: name, mode: mode, jobs: make(chan func()), start: make(chan struct{}, 1)}
+	t.start <- struct{}{}
+	return t
+}
+
 var (
-	comJobs  = make(chan func())
-	comStart = make(chan struct{}, 1)
-	errBusy  = errors.New("Windows didn't answer in time")
+	mediaThread = newCOMThread("music", ole.COINIT_MULTITHREADED)
+	shellThread = newCOMThread("apps", ole.COINIT_APARTMENTTHREADED|ole.COINIT_DISABLE_OLE1DDE) // as the Shell asks
 )
 
-func init() { comStart <- struct{}{} }
-
 // onCOM runs f on the media thread and waits for it.
-func onCOM(f func()) error {
+func onCOM(f func()) error { return mediaThread.do(f) }
+
+// onShell runs f on the apps thread and waits for it.
+func onShell(f func()) error { return shellThread.do(f) }
+
+func (t *comThread) do(f func()) error {
 	select {
-	case <-comStart:
-		go comThread()
+	case <-t.start:
+		go t.loop()
 	default:
 	}
 	done := make(chan struct{})
@@ -38,14 +56,14 @@ func onCOM(f func()) error {
 		defer close(done)
 		defer func() {
 			if r := recover(); r != nil { // the WinRT bindings panic when Windows says no
-				report(fmt.Sprintf("music: %v", r))
+				report(fmt.Sprintf("%s: %v", t.name, r))
 			}
 		}()
 		f()
 	}
 	timeout := time.After(10 * time.Second)
 	select {
-	case comJobs <- job:
+	case t.jobs <- job:
 	case <-timeout:
 		return errBusy
 	}
@@ -57,10 +75,10 @@ func onCOM(f func()) error {
 	}
 }
 
-func comThread() {
+func (t *comThread) loop() {
 	runtime.LockOSThread()
-	ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
-	for f := range comJobs {
+	ole.CoInitializeEx(0, t.mode)
+	for f := range t.jobs {
 		f()
 	}
 }

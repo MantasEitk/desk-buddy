@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.8",
+    "date": "2026-10-11",
+    "items": [
+      "Added: real app icons on the Kindle's Deck",
+      "Fixed: the Deck lists all your apps, including ones from the Microsoft Store (WhatsApp, Calculator…)",
+      "Fixed: favourites on the Deck open again, and start out as apps you actually have"
+    ]
+  },
+  {
     "version": "0.7",
     "date": "2026-10-11",
     "items": [

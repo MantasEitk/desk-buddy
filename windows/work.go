@@ -5,10 +5,7 @@ package main
 // app list current, and chime when a focus or break ends. Music is in music.go.
 
 import (
-	"os"
-	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -107,8 +104,9 @@ func deck() {
 // Only meeting links from these services open (the Kindle's Join), never anything else.
 var meeting = regexp.MustCompile(`(?i)^https://(?:[a-z0-9-]+\.)*(?:zoom\.us|meet\.google\.com|teams\.microsoft\.com|teams\.live\.com|webex\.com|whereby\.com|meet\.jit\.si)(?:/[^\s"'<>()]*)?$`)
 
-// openItem opens a Deck tile: an app from the Start menu by its name, or a meeting link.
-// Never runs commands.
+// openItem opens a Deck tile: an app from the PC's list (by the tile's win, then its label),
+// a bare link like spotify: or a program like chrome.exe (apps.go says which), or a meeting
+// link. Never runs commands.
 func openItem(it deckItem) string {
 	if it.URL != nil {
 		if !meeting.MatchString(*it.URL) {
@@ -119,90 +117,90 @@ func openItem(it deckItem) string {
 		}
 		return ""
 	}
-	name := it.Win
+	appsMu.Lock()
+	target := tileTarget(it, apps)
+	appsMu.Unlock()
+	name := it.Label
 	if name == "" {
-		name = it.Label
+		name = it.Win
 	}
-	path, ok := findApp(name)
-	if !ok {
-		return "no app called " + name + " in the Start menu"
+	if target == "" {
+		return "no app called " + name + " on this PC"
 	}
-	if e := shellOpen(path); e != nil {
+	if e := launch(target); e != nil {
+		logf("open %s: %v", name, e)
 		return "couldn't open " + name
 	}
 	return ""
 }
 
-// ---- the apps (Start menu shortcuts), for the Kindle's "All apps" ----
+// ---- the apps (Windows' "All apps"), for the Kindle's "All apps" and the tiles' icons ----
 
 var (
 	appsMu sync.Mutex
-	apps   = map[string]string{} // name → shortcut
+	apps   = map[string]string{} // name → target (apps.go)
 )
 
-var safeName = regexp.MustCompile(`^[\w .&'+()-]{1,60}$`)
-
-func scanApps() map[string]string {
-	found := map[string]string{}
-	for _, dir := range []string{
-		filepath.Join(os.Getenv("ProgramData"), `Microsoft\Windows\Start Menu\Programs`),
-		filepath.Join(os.Getenv("APPDATA"), `Microsoft\Windows\Start Menu\Programs`),
-	} {
-		filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.EqualFold(filepath.Ext(p), ".lnk") {
-				return nil
-			}
-			name := strings.TrimSuffix(d.Name(), filepath.Ext(d.Name()))
-			low := strings.ToLower(name)
-			if !safeName.MatchString(name) || strings.Contains(low, "uninstall") || strings.Contains(low, "readme") || strings.Contains(low, "help") {
-				return nil
-			}
-			if _, dup := found[name]; !dup {
-				found[name] = p
-			}
-			return nil
-		})
+// loadApps: Windows' "All apps", or the Start menu's shortcuts if Windows won't list them.
+func loadApps() map[string]string {
+	found, err := listApps()
+	if err != nil {
+		report("apps: " + err.Error() + ", using the Start menu's shortcuts")
+		found = scanShortcuts()
 	}
 	return found
 }
 
-func findApp(name string) (string, bool) {
-	appsMu.Lock()
-	defer appsMu.Unlock()
-	if p, ok := apps[name]; ok {
-		return p, true
-	}
-	for n, p := range apps { // "chrome" for "Google Chrome"
-		if strings.EqualFold(n, name) {
-			return p, true
-		}
-	}
-	return "", false
-}
-
-// appList sends the app names when they change (looked at every 10 minutes), and every 6 hours.
+// appList sends the app names and icons when the apps or the PC's favourite tiles change
+// (looked at every 10 minutes), and every 6 hours. Like the Mac's IconSync: off the window's
+// thread, and an app's icon is made once (kept while the app is there).
 func appList() {
 	var sent string
 	var at time.Time
+	made := map[string][]byte{} // target → icon PNG (nil: Windows had none)
 	for {
+		again := false
 		if connected() && !current().Paused {
-			found := scanApps()
+			found := loadApps()
 			appsMu.Lock()
 			apps = found
 			appsMu.Unlock()
-			names := make([]string, 0, len(found))
-			for n := range found {
-				names = append(names, n)
+			names := sortedNames(found)
+			var deck struct {
+				Home []deckItem `json:"home"` // the PC's tiles (the Mac's are "work")
 			}
-			sort.Strings(names)
-			sig := current().Server + "|" + strings.Join(names, "|")
+			call(quick, "GET", "/api/deck", nil, &deck)
+			tiles := make([]string, len(deck.Home))
+			for i, t := range deck.Home {
+				tiles[i] = t.Label + "=" + t.Win
+			}
+			sig := current().Server + "|" + strings.Join(tiles, ",") + "|" + strings.Join(names, "|")
 			if sig != sent || time.Since(at) > 6*time.Hour {
-				if err := call(quick, "POST", "/api/deck/icons", map[string]any{"machine": "pc", "icons": map[string]string{}, "apps": names}, nil); err == nil {
-					sent, at = sig, time.Now()
+				kept := map[string][]byte{}
+				icons := collectIcons(deck.Home, found, func(target string) []byte {
+					p, ok := kept[target]
+					if !ok {
+						p, ok = made[target]
+					}
+					if !ok {
+						p = appIcon(target)
+						time.Sleep(20 * time.Millisecond) // gently: a few hundred apps the first time
+					}
+					kept[target] = p
+					return p
+				})
+				made = kept
+				var r struct{ Seeded bool } // the server just picked this PC's first favourites
+				if err := call(quick, "POST", "/api/deck/icons", map[string]any{"machine": "pc", "icons": icons, "apps": names, "all_apps": true}, &r); err == nil {
+					sent, at, again = sig, time.Now(), r.Seeded
+				} else {
+					report("apps: " + err.Error())
 				}
 			}
 		}
-		time.Sleep(10 * time.Minute)
+		if !again { // the new tiles' icons go up straight away
+			time.Sleep(10 * time.Minute)
+		}
 	}
 }
 

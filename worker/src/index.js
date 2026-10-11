@@ -47,13 +47,38 @@ const KINDLE_SETTINGS = {
 };
 
 // Starting deck tiles. `app` is the Mac app name (opened with `open -a`); `win` is what
-// Windows opens (an app name it knows, a path, or a link like spotify:). Edit with PUT /api/deck.
+// Windows opens (an app's name on its list, a link like spotify: or a program like chrome.exe).
+// The PC's are replaced by PC_STARTERS when it first sends its apps. Edit with PUT /api/deck.
 const DEFAULT_DECK = {
   work: ["Slack", "Figma", "Notion", "Linear", "Google Chrome", "Spotify", "Mail", "Calendar", "Claude", "Terminal", "Finder", "Notes"]
     .map((a) => ({ label: a.replace("Google ", ""), app: a })),
   home: [["Spotify", "spotify:"], ["Discord", "discord:"], ["Steam", "steam:"], ["Chrome", "chrome.exe"], ["WhatsApp", "whatsapp:"], ["Files", "explorer.exe"]]
     .map(([label, win]) => ({ label, win })),
 };
+
+// The PC's first favourites, from the apps actually on it (its first app list): these, in
+// this order, up to 12. Each line is one tile: the first of its names that's on the PC.
+const PC_STARTERS = [
+  ["Spotify"], ["Google Chrome", "Microsoft Edge"], ["Firefox", "Mozilla Firefox"], ["Discord"], ["WhatsApp"], ["Steam"],
+  ["Slack"], ["Microsoft Teams", "Microsoft Teams (work or school)", "Microsoft Teams classic"], ["Outlook (new)", "Outlook", "Microsoft Outlook"],
+  ["Figma"], ["Notion"], ["File Explorer"], ["Settings"], ["Calculator"], ["Notepad"],
+  ["Visual Studio Code"], ["Obsidian"], ["Zoom Workplace", "Zoom"], ["Telegram Desktop", "Telegram"], ["Epic Games Launcher"],
+  ["Xbox"], ["Netflix"], ["Photos"], ["Word"], ["Excel"], ["Paint"], ["Snipping Tool"], ["Microsoft Store"],
+];
+const STARTER_LABELS = { "File Explorer": "Files", "Visual Studio Code": "VS Code", "Zoom Workplace": "Zoom", "Telegram Desktop": "Telegram", "Epic Games Launcher": "Epic Games" };
+
+function starterTiles(apps) {
+  const byName = new Map(apps.map((a) => [a.toLowerCase(), a]));
+  const tiles = [];
+  for (const names of PC_STARTERS) {
+    const win = names.map((n) => byName.get(n.toLowerCase())).find(Boolean);
+    if (!win) continue;
+    const label = STARTER_LABELS[win] || win.replace(/^(Google|Microsoft|Mozilla) /, "").replace(/ \(.*\)$/, ""); // "Chrome", like the Mac's
+    tiles.push({ label, win });
+    if (tiles.length === 12) break;
+  }
+  return tiles;
+}
 
 export default {
   async fetch(request, env, ctx) {
@@ -314,11 +339,23 @@ async function handle(request, env, ctx) {
     if (path === "/api/deck/icons" && method === "POST") {
       const b = await body(request);
       if (!(b.machine in MACHINES) || typeof b.icons !== "object") throw new HttpError(400, "Send {machine, icons: {label: base64 png}, apps: [names]}.");
+      let seeded = false;
       // Every app on that computer (the Kindle's "All apps" view); names only, sorted.
       if (Array.isArray(b.apps)) {
         const apps = [...new Set(b.apps.map((a) => String(a).slice(0, 60)).filter((a) => /^[\w .&'+()-]{1,60}$/.test(a)))]
           .sort((x, y) => x.localeCompare(y)).slice(0, 300);
         await db.set(`deck_apps_${b.machine}`, apps);
+        // The PC's favourites start as a guess; once its apps are known, the common ones it
+        // really has replace them. Only while untouched, never the Mac's, and only from a
+        // helper that sends Windows' whole "All apps" (all_apps; 0.7 sent Start menu shortcuts).
+        if (b.machine === "pc" && b.all_apps === true) {
+          const deck = await db.get("deck");
+          const tiles = starterTiles(apps);
+          if ((!deck || JSON.stringify(deck.home) === JSON.stringify(DEFAULT_DECK.home)) && tiles.length) {
+            await db.set("deck", { ...(deck || DEFAULT_DECK), home: tiles });
+            seeded = true;
+          }
+        }
       }
       const icons = Object.fromEntries(Object.entries(b.icons).slice(0, 320)
         .filter(([, v]) => typeof v === "string" && v.length < 40000).map(([k, v]) => [String(k).slice(0, 40), v]));
@@ -328,7 +365,7 @@ async function handle(request, env, ctx) {
         await db.set(`deck_icons_${b.machine}`, icons);
         await db.set(`deck_icons_ver_${b.machine}`, version);
       }
-      return json({ ok: true, version, icons: Object.keys(icons).length });
+      return json({ ok: true, version, icons: Object.keys(icons).length, seeded });
     }
     if (path === "/api/deck/icons" && method === "GET") {
       const machine = url.searchParams.get("machine");
@@ -1328,7 +1365,7 @@ function musicNow(kv) {
   const all = ["mac", "pc"].map((m) => kv[`music_${m}`] && { ...kv[`music_${m}`], machine: m }).filter(Boolean);
   // Playing on both (Spotify shows the same song as playing on every device it's signed in
   // on): the computer touched last wins, so the Kindle doesn't flip between them every few
-  // seconds.
+  // seconds (2026-10-11: the PC's output list kept appearing and vanishing).
   const hb = kv.heartbeats || {};
   const used = (m) => (hb[m.machine] ? hb[m.machine].at - (hb[m.machine].idle || 0) : 0);
   const fresh = all.filter((m) => now() - m.at < 600).sort((a, b) => (b.playing - a.playing) || (used(b) - used(a)) || (b.at - a.at));
