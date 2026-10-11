@@ -1326,7 +1326,12 @@ const ago = (sec) => (sec < 90 ? "just now" : sec < 3600 ? `${Math.round(sec / 6
 // The music playing most recently on any computer (reported in the last 10 minutes).
 function musicNow(kv) {
   const all = ["mac", "pc"].map((m) => kv[`music_${m}`] && { ...kv[`music_${m}`], machine: m }).filter(Boolean);
-  const fresh = all.filter((m) => now() - m.at < 600).sort((a, b) => (b.playing - a.playing) || (b.at - a.at));
+  // Playing on both (Spotify shows the same song as playing on every device it's signed in
+  // on): the computer touched last wins, so the Kindle doesn't flip between them every few
+  // seconds.
+  const hb = kv.heartbeats || {};
+  const used = (m) => (hb[m.machine] ? hb[m.machine].at - (hb[m.machine].idle || 0) : 0);
+  const fresh = all.filter((m) => now() - m.at < 600).sort((a, b) => (b.playing - a.playing) || (used(b) - used(a)) || (b.at - a.at));
   if (!fresh[0]) return null;
   // the cover only counts when it's this song's (a failed or late send must not leave the
   // previous song's picture next to the new title)
