@@ -51,7 +51,7 @@ Click Desk Buddy in the menu bar (or open it from Applications):
 
 ## Update
 
-Download the new version from [Releases](../../../releases) and replace the old one in Applications. Your tasks and settings are kept. (An Update button in the app is coming.)
+**About › Updates** shows your version and what's new in it, and looks for a newer one. To update, download the new version from [Releases](../../../releases) and replace the old one in Applications. Your tasks and settings are kept. (Installing updates from inside the app comes once Desk Buddy's releases are public.)
 
 ## Uninstall
 

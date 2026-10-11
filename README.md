@@ -64,9 +64,9 @@ A small app in your menu bar connects your Mac. It runs Desk Buddy's server (so 
 ## What you need
 
 - **A jailbroken touch Kindle.** Tested on the **Kindle Paperwhite 2** (see [Compatibility](#compatibility)). Jailbreak it with [kindlemodding.org](https://kindlemodding.org), including the hotfix.
-- **A Mac** with macOS 13 Ventura or newer. (Windows is on the way.)
+- **A Mac** with macOS 13 Ventura or newer, **or a Windows 10 / 11 PC** (early test version).
 - **A USB cable, once**: Desk Buddy for Mac or Windows puts Desk Buddy on the Kindle for you. After that it updates over Wi-Fi.
-- **That's it.** No account, no subscription. Desk Buddy runs its own small server on your Mac.
+- **That's it.** No account, no subscription. Desk Buddy runs its own small server on your computer.
 
 Optional: your own free **Cloudflare** server, so the Kindle and your phone keep working while your Mac sleeps or you're away. See [docs/cloud.md](docs/cloud.md).
 
@@ -91,8 +91,8 @@ From then on: everything happens on the Mac (Desk Buddy in the menu bar) or on t
 | Kindles without a touchscreen | ❌ No |
 | Jailbreak | The [kindlemodding.org](https://kindlemodding.org) jailbreak **with its hotfix** (it provides FBInk, the root helper and the script launcher Desk Buddy uses). KUAL isn't needed. |
 | Kindle Wi-Fi | 2.4 GHz, WPA2 (the Paperwhite 2 can't join 5 GHz-only or WPA3-only networks) |
-| **Mac** | macOS 13 Ventura or newer. Apple Silicon: tested. Intel: the release build is universal, but untested. |
-| **Windows** | 🚧 Coming |
+| **Mac** | macOS 13 Ventura or newer. Apple Silicon: tested. Intel: the download is built for it too, but nobody has tried it on an Intel Mac yet. |
+| **Windows** | Windows 10 / 11 (64-bit). Early test version: tasks, the Kindle's settings, the Deck and putting Desk Buddy on a Kindle work; music and calendars are being added. |
 | Phone page | Any modern phone browser (iPhone, Android) |
 | Music | Spotify and Apple Music desktop apps on the Mac |
 | Calendar | Everything in the Mac's Calendar app (iCloud, Google, Exchange, … accounts added there), plus calendar links (.ics) added on the phone page |
@@ -129,14 +129,15 @@ Desk Buddy grew from there, with a few bumps along the way:
 - **Only the Paperwhite 2** works for now (see [Compatibility](#compatibility)).
 - **The first install needs USB.** On macOS 26, USB with Kindles can be flaky (the drive disconnects, or files you copied don't stick). Copy, eject properly, and check the files are there; tips in [docs/install-kindle.md](docs/install-kindle.md).
 - **The Mac app isn't signed** by Apple yet (a paid developer membership): the first time, allow it once in System Settings › Privacy & Security › **Open Anyway** (macOS 15+) or with right-click › **Open** (macOS 13–14). macOS may also ask for its permissions again after each update.
-- **The Mac download is about 50 MB**, because it carries Desk Buddy's server for both Apple Silicon and Intel Macs.
+- **The Mac download is about 60 MB**, because it carries Desk Buddy's server for both Apple Silicon and Intel Macs.
+- **The downloads are brand new.** They're built and checked, but haven't been tried yet on a fresh Mac, an Intel Mac or someone else's PC. If something doesn't work, please [open an issue](../../issues).
 - **On "This Mac"** (the default), the Kindle only updates while your Mac is awake, on the same Wi-Fi, with Desk Buddy open. It shows your last screen meanwhile and catches up when the Mac is back. Want it always on? Use your own [cloud server](docs/cloud.md).
 - **After the Kindle restarts**, open Desk Buddy from the library again (it doesn't start by itself).
 - **Weak Wi-Fi at the desk** makes the Kindle slow or offline. Restarting the router has fixed it more than once.
 - **Spotify** sometimes reports nothing playing through its AppleScript; play / pause once and it catches up. Music playing on another device (Spotify Connect) doesn't show.
 - **Apple Music covers** only show for songs that have artwork stored on your Mac.
 - **Speaker switching** changes your Mac's sound output, not Spotify Connect devices.
-- **Windows** isn't ready yet.
+- **Windows** is an early test version: no music or calendars yet, and as it isn't signed (that costs money), Windows may warn the first time: **More info › Run anyway**.
 
 Something else? [Open an issue](../../issues).
 
