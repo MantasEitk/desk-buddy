@@ -5,9 +5,11 @@ package main
 // app list current, and chime when a focus or break ends. Music is in music.go.
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -15,6 +17,9 @@ const inUse = 240 // seconds without input before the PC counts as not in use (t
 
 // heartbeats: says when the PC starts or stops being used, or light / dark changes, and every
 // 2 minutes otherwise (the server forgets a computer after 3). Looking is local, every 10 s.
+// keyRefused: the last heartbeat was turned away for the key (the window offers "Join again").
+var keyRefused atomic.Bool
+
 func heartbeats() {
 	var last time.Time
 	var wasUsed, wasDark, sent bool
@@ -30,10 +35,16 @@ func heartbeats() {
 					body["dark"] = dark
 				}
 				var r struct{ Profile string }
-				if err := call(quick, "POST", "/api/heartbeat", body, &r); err != nil {
+				if err := call(quick, "POST", "/api/heartbeat", body, &r); errors.Is(err, errKeyRefused) {
+					setStatus("Desk Buddy on your other computer doesn't know this PC any more. Join it again")
+					keyRefused.Store(true)
+					last = time.Now().Add(-90 * time.Second)
+				} else if err != nil {
+					keyRefused.Store(false)
 					setStatus("Can't reach the server, retrying")
 					last = time.Now().Add(-90 * time.Second) // try again in 30 s
 				} else {
+					keyRefused.Store(false)
 					setStatus(map[string]string{"home": "Running · the Kindle shows the Windows list", "work": "Running · the Kindle shows the Mac list"}[r.Profile])
 					last, sent, wasUsed, wasDark = time.Now(), true, used, dark
 				}

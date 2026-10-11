@@ -6,6 +6,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -45,6 +46,9 @@ func call(hc *http.Client, method, path string, body, out any) error {
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == 401 {
+		return errKeyRefused
+	}
 	if resp.StatusCode != 200 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
 		return fmt.Errorf("server said %s: %s", resp.Status, strings.TrimSpace(string(b)))
@@ -54,6 +58,10 @@ func call(hc *http.Client, method, path string, body, out any) error {
 	}
 	return nil
 }
+
+// errKeyRefused: the server is there but doesn't take this PC's key any more (Desk Buddy on
+// the other computer was reinstalled, or its key changed): this PC has to join again.
+var errKeyRefused = errors.New("the server doesn't know this PC any more")
 
 // claim trades the Mac app's one-time code for the key (no key needed for this one).
 func claim(server, code string) (string, error) {

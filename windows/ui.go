@@ -58,7 +58,7 @@ func uiRoutes(mux *http.ServeMux) {
 		c := current()
 		st, last := getStatus()
 		info := map[string]any{"mode": c.Mode, "server": c.Server, "connected": connected(), "paused": c.Paused,
-			"startup": startsWithWindows(), "status": st, "last": last, "version": version, "pairs": pairs(), "perf": perfInfo(), "node": nodeInstalled()}
+			"startup": startsWithWindows(), "status": st, "last": last, "refused": keyRefused.Load(), "version": version, "pairs": pairs(), "perf": perfInfo(), "node": nodeInstalled()}
 		if r, n, busy := updateState(); r != nil || n != "" {
 			info["update"] = map[string]any{"ready": r, "note": n, "busy": busy}
 		}
@@ -136,6 +136,7 @@ func uiRoutes(mux *http.ServeMux) {
 				stopServer()
 			}
 			saveConfig(Config{})
+			keyRefused.Store(false)
 			setStatus("Not set up")
 		case "offer": // a one-time code for another computer
 			var o struct{ Code string }

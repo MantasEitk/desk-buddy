@@ -226,6 +226,7 @@ function homePage() {
 <span class="acts">${sub ? "" : `<button class="ic" data-a="addsub" title="Add a subtask">＋</button>`}<button class="ic" data-a="pin" title="${t.pinned ? "Unpin" : "Now working on"}">${t.pinned ? "Unpin" : "Pin"}</button><button class="ic" data-a="up" title="Move up">↑</button><button class="ic" data-a="down" title="Move down">↓</button><button class="ic" data-a="del" title="Delete">✕</button></span></div>`;
   const rows = top.map((t) => trow(t, false, kids(t.id).length) + kids(t.id).map((k) => trow(k, true, 0)).join("")).join("");
   const needs = [];
+  if (info.refused) needs.push(`<div class="needs"><b>Desk Buddy on your other computer doesn't know this PC any more</b><span class="sub">It was probably reinstalled. Join it again: this PC finds it on the Wi-Fi, then click Allow there.</span><button class="pill solid" style="margin-top:8px" onclick="if(confirm('Join again?\\n\\nThis PC forgets the old connection and looks for Desk Buddy on the Wi-Fi.'))act({do:'reset'}).then(refresh)">Join again</button></div>`);
   if (kstatus && kstatus.up_to_date === false) needs.push(`<div class="needs"><b>Your Kindle has an update waiting</b><span class="sub">Tap Update at the top of its screen</span></div>`);
   if (kstatus && Date.now() / 1000 - kstatus.at > 600) needs.push(`<div class="needs"><b>Your Kindle hasn't been in touch for a while</b><span class="sub">Is it on the Wi-Fi, with Desk Buddy open?</span></div>`);
   let kl = "";

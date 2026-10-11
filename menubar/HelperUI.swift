@@ -1363,6 +1363,15 @@ struct WelcomeView: View {
                 }
                 .padding(.top, 22)
             }
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "pc").font(.system(size: 15)).foregroundColor(c.ink).frame(width: 20)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Got a Windows PC too?").font(KD.font(13, bold: true)).foregroundColor(c.ink)
+                    Text("Install Desk Buddy for Windows on it (from the same download page). It finds this Mac on the Wi-Fi by itself: click Allow here when it asks. Then the Kindle shows whichever computer you're using.")
+                        .font(KD.font(12)).foregroundColor(c.grey).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12).background(RoundedRectangle(cornerRadius: 6).stroke(c.line, lineWidth: 1)).padding(.top, 22)
             Text("Everything else is in this window: your tasks on Home, the Kindle's settings, and more. Open it any time from Desk Buddy in the menu bar.")
                 .font(KD.font(12)).foregroundColor(c.grey).padding(.top, 22).fixedSize(horizontal: false, vertical: true)
         }
