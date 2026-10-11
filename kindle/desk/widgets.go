@@ -26,6 +26,15 @@ type Music struct {
 	Outputs []Output `json:"outputs"` // where the computer's sound can go (empty: no choice)
 }
 
+// musicComputer: "PC" when the music comes from the Windows PC, else "Mac" (also when unknown,
+// as before Windows had music).
+func musicComputer(m *Music) string {
+	if m != nil && m.Machine == "pc" {
+		return "PC"
+	}
+	return "Mac"
+}
+
 // Output is one of the computer's sound outputs (MacBook speakers, AirPods…).
 type Output struct {
 	ID        string `json:"id"`
@@ -267,13 +276,13 @@ func musicWidget(v *View, d *Desk, ui *UI, x0, x1, y int) {
 	img := v.Img
 	m := d.Music
 	if m == nil || !m.Running || m.Title == "" {
-		hint := "Open Spotify or Apple Music on your Mac"
+		hint := "Open Spotify or Apple Music on your " + musicComputer(m)
 		if m != nil && m.Running { // open, but nothing loaded here (or playing on another device)
 			hint = map[string]string{"Music": "Apple Music"}[m.App]
 			if hint == "" {
 				hint = m.App
 			}
-			hint += " is open, but not playing on this Mac"
+			hint += " is open, but not playing on this " + musicComputer(m)
 		}
 		label(img, x0, y+12, "MUSIC", grey2)
 		drawText(img, face("serifB", 22), x0, y+50, "Nothing playing", ink)

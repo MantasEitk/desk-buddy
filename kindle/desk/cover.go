@@ -62,9 +62,9 @@ func coverView(v *View, d *Desk, st Status, ui *UI) {
 		drawRecord(img, cr)
 		v.add(Target{R: cr, Act: "cover"})
 		drawText(img, face("serifB", 30), x0, cy+110, "Nothing playing", ink)
-		hint := "Open Spotify on your Mac"
+		hint := "Open Spotify on your " + musicComputer(m)
 		if m != nil && m.Running {
-			hint = "Spotify is open, but not playing on this Mac"
+			hint = "Spotify is open, but not playing on this " + musicComputer(m)
 		}
 		for i, l := range wrap(face("ui", 17), hint, x1-x0, 3) {
 			drawText(img, face("ui", 17), x0, cy+142+i*24, l, grey2)
