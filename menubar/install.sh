@@ -22,7 +22,7 @@ pkill -f "Desk Buddy.app/Contents/MacOS/desk-buddy-server" 2>/dev/null || true
 
 rm -rf "$APP/Contents" # replace what's inside, keep the app itself (so it stays in the Dock)
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$HOME/Library/LaunchAgents"
-swiftc -O -o "$APP/Contents/MacOS/DeskBuddy" main.swift Backend.swift CalendarSync.swift IconSync.swift Permissions.swift HelperUI.swift Updater.swift KindleSetup.swift
+swiftc -O -o "$APP/Contents/MacOS/DeskBuddy" main.swift Backend.swift CalendarSync.swift IconSync.swift Permissions.swift HelperUI.swift Updater.swift KindleSetup.swift MoveToApplications.swift
 swiftc -O -o "$APP/Contents/MacOS/audio-out" AudioOut.swift  # the Mac's sound outputs (Kindle music screen)
 cp ../backend/helper.py AppIcon.icns patchnotes.json "$APP/Contents/Resources/"
 # your own settings if you made backend/config.json, else the example (starts on "This Mac")

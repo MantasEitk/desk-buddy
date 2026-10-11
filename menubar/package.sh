@@ -34,7 +34,7 @@ PY
 cp ../worker/local/dist/desk-buddy-server-arm64 ../worker/local/dist/desk-buddy-server-x64 "$APP/Contents/MacOS/"
 
 # the app and audio-out, for both chips, joined into one
-SRC="main.swift Backend.swift CalendarSync.swift IconSync.swift Permissions.swift HelperUI.swift Updater.swift KindleSetup.swift"
+SRC="main.swift Backend.swift CalendarSync.swift IconSync.swift Permissions.swift HelperUI.swift Updater.swift KindleSetup.swift MoveToApplications.swift"
 for a in arm64 x86_64; do
   swiftc -O -target $a-apple-macos13 -o "$OUT/DeskBuddy-$a" $SRC
   swiftc -O -target $a-apple-macos13 -o "$OUT/audio-out-$a" AudioOut.swift

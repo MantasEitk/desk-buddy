@@ -46,6 +46,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
             DistributedNotificationCenter.default().postNotificationName(.init(agentLabel + ".show"), object: nil, userInfo: nil, deliverImmediately: true)
             exit(0)
         }
+        if MoveToApplications.offer() { return } // opened from Downloads: move to Applications first
         DistributedNotificationCenter.default().addObserver(forName: .init(agentLabel + ".show"), object: nil, queue: .main) { [weak self] _ in
             self?.showWindow()
         }
