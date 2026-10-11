@@ -12,16 +12,23 @@ Needs macOS 13 Ventura or newer.
 
 ## Install
 
-1. Download **Desk Buddy for Mac** (`.zip`) from [Releases](../../../releases) and open the zip (double-click it in Downloads).
-2. Open **Desk Buddy**. The first time, macOS warns that it can't check the app (see [Before you download](#before-you-download)). Allow it once:
-   - **macOS 15 Sequoia and newer:** click **Done** on the warning, then open **System Settings › Privacy & Security**, scroll down to *"Desk Buddy" was blocked…* and click **Open Anyway** (it asks for your password). Open Desk Buddy again and click **Open**.
-   - **macOS 13–14:** **right-click** (or Control-click) Desk Buddy › **Open**, then **Open** again.
-3. Desk Buddy asks to **move itself to your Applications folder**: click **Move to Applications**. It opens again from there. (No dragging needed. You can also drag it into Applications yourself first.)
-4. The **welcome** walks you through it:
+1. **Download** [Desk-Buddy-for-Mac.zip](../../../releases/latest/download/Desk-Buddy-for-Mac.zip). Safari unzips it by itself; in other browsers, double-click the zip in Downloads.
+2. **Move it to Applications:** open Finder, and drag **Desk Buddy** from **Downloads** onto **Applications** in the sidebar.
+3. **Open Desk Buddy** from Applications. macOS shows this, because the app isn't signed by Apple (that needs a paid membership):
+
+   <img src="mac-not-opened.png" width="300" alt="&quot;Desk Buddy&quot; Not Opened: Apple could not verify Desk Buddy is free of malware">
+
+   Click **Done**. **Not** "Move to Bin".
+4. Open **System Settings › Privacy & Security**, scroll down to *"Desk Buddy" was blocked…* and click **Open Anyway** (it asks for your password).
+5. **Open Desk Buddy again** and click **Open**. That's the last time macOS asks.
+
+(On macOS 13–14 there's no Open Anyway step: **right-click** Desk Buddy in Applications › **Open**, then **Open** again. Forgot to move it? Desk Buddy offers to move itself to Applications the first time it opens.)
+
+6. The **welcome** walks you through it:
    - what Desk Buddy does,
    - the permissions (each one is optional and only adds what it says),
    - connecting your Kindle.
-5. macOS asks once whether Desk Buddy may **accept incoming network connections**: click **Allow**. That's how the Kindle and your phone reach it.
+7. macOS asks once whether Desk Buddy may **accept incoming network connections**: click **Allow**. That's how the Kindle and your phone reach it.
 
 Desk Buddy starts by itself when you log in. To stop that, use **About › Start at login** in its window.
 

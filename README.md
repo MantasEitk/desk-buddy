@@ -30,7 +30,7 @@
 
 | | | |
 |---|---|---|
-| 💻 **Mac** | [**Download Desk Buddy for Mac**](../../releases/latest/download/Desk-Buddy-for-Mac.zip) | Open it: it moves itself to Applications and walks you through the rest. macOS 13 or newer. |
+| 💻 **Mac** | [**Download Desk Buddy for Mac**](../../releases/latest/download/Desk-Buddy-for-Mac.zip) | **Move it to Applications**, open it, and allow it once ([the steps](#set-up)). macOS 13 or newer. |
 | 🪟 **Windows** | [**Download Desk Buddy for Windows**](../../releases/latest/download/Desk-Buddy-for-Windows.zip) | Early test version. Unzip and open *Desk Buddy.exe*. |
 | 📖 **Kindle** | **Nothing to download:** Desk Buddy for Mac or Windows puts it on your Kindle | Plug your jailbroken Kindle in with USB and click **Put Desk Buddy on it**. After that it updates itself over Wi-Fi. |
 
@@ -76,9 +76,18 @@ Optional: your own free **Cloudflare** server, so the Kindle and your phone keep
 
 About 15 minutes, once.
 
-1. **Mac**: download *Desk Buddy for Mac* from [Releases](../../releases) (about 70 MB), open the zip and open Desk Buddy. It offers to move itself to Applications, then walks you through what it needs. → [docs/install-mac.md](docs/install-mac.md)
+1. **Mac** (about 70 MB, macOS 13 or newer):
+   1. **Download** [Desk-Buddy-for-Mac.zip](../../releases/latest/download/Desk-Buddy-for-Mac.zip). Safari unzips it by itself; in other browsers, double-click the zip in Downloads.
+   2. **Move it to Applications:** open Finder, and drag **Desk Buddy** from **Downloads** onto **Applications** in the sidebar.
+   3. **Open Desk Buddy** from Applications. macOS shows this, because the app isn't signed by Apple (that needs a paid membership):
 
-   > **Heads-up:** the app isn't signed by Apple (that needs a paid developer membership), so the first time, macOS warns it can't check the app. Allow it once: on macOS 15 and newer in **System Settings › Privacy & Security › Open Anyway**; on macOS 13–14 by **right-clicking › Open**. [Why, and what that means](docs/install-mac.md#before-you-download).
+      <img src="docs/mac-not-opened.png" width="300" alt="&quot;Desk Buddy&quot; Not Opened: Apple could not verify Desk Buddy is free of malware">
+
+      Click **Done**. **Not** "Move to Bin".
+   4. Open **System Settings › Privacy & Security**, scroll down to *"Desk Buddy" was blocked…* and click **Open Anyway** (it asks for your password).
+   5. **Open Desk Buddy again** and click **Open**. That's the last time macOS asks.
+
+   Desk Buddy then walks you through the rest. More detail (and macOS 13–14): [docs/install-mac.md](docs/install-mac.md).
 2. **Kindle**: plug it into your Mac with USB. Desk Buddy says **Kindle found**: click **Put Desk Buddy on it**. It copies itself over, checks every file landed, and ejects the Kindle. Unplug it and open **Desk Buddy** from the Kindle's library.
 
    > **Didn't work?** (the app doesn't find the Kindle, or says files didn't stick) Copy it by hand instead: download **Desk-Buddy-for-Kindle.zip** from [Releases](../../releases) (or click **Save the files instead…** in the app), unzip it, copy the **`desk`** folder to the top of the Kindle drive and **`Desk Buddy.sh`** into its **`documents`** folder, then eject. Step by step, with USB tips: [docs/install-kindle.md](docs/install-kindle.md#if-that-doesnt-work-copy-it-by-hand).
