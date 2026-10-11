@@ -55,6 +55,8 @@ Smelly nerds: the code is all here, and [docs/building.md](docs/building.md) sho
 
 <p align="center"><img src="docs/calendar.png" width="49%" alt="Calendar tab"> <img src="docs/weather.png" width="49%" alt="Weather tab: now, the next 12 hours and the week"></p>
 
+<p align="center"><img src="docs/music.png" width="49%" alt="Music: what's playing on your computer, with the album cover, controls and where the sound goes"> <img src="docs/deck.png" width="49%" alt="Deck: tap an app to open it on your computer"></p>
+
 ## Desk Buddy for Mac
 
 A small app in your menu bar connects your Mac. It runs Desk Buddy's server (so there's nothing else to set up), tells the Kindle when you're at your Mac, sends your calendar and what's playing, and opens apps when you tap the Deck. Its window has your **task list** (drag to reorder, subtasks, pin), **all the Kindle's settings**, the **phone page QR code**, the **permissions** with what each one shares, and how little it uses.
@@ -92,9 +94,9 @@ From then on: everything happens on the Mac (Desk Buddy in the menu bar) or on t
 | Jailbreak | The [kindlemodding.org](https://kindlemodding.org) jailbreak **with its hotfix** (it provides FBInk, the root helper and the script launcher Desk Buddy uses). KUAL isn't needed. |
 | Kindle Wi-Fi | 2.4 GHz, WPA2 (the Paperwhite 2 can't join 5 GHz-only or WPA3-only networks) |
 | **Mac** | macOS 13 Ventura or newer. Apple Silicon: tested. Intel: the download is built for it too, but nobody has tried it on an Intel Mac yet. |
-| **Windows** | Windows 10 / 11 (64-bit). Early test version: tasks, the Kindle's settings, the Deck and putting Desk Buddy on a Kindle work; music and calendars are being added. |
+| **Windows** | Windows 10 / 11 (64-bit). Early test version: tasks, the Kindle's settings, the Deck, music, volume, calendar links and putting Desk Buddy on a Kindle. |
 | Phone page | Any modern phone browser (iPhone, Android) |
-| Music | Spotify and Apple Music desktop apps on the Mac |
+| Music | Spotify and Apple Music desktop apps on the Mac; on Windows anything that shows in Windows' media controls (Spotify, Apple Music, browsers…) |
 | Calendar | Everything in the Mac's Calendar app (iCloud, Google, Exchange, … accounts added there), plus calendar links (.ics) added on the phone page |
 | Own cloud server | Cloudflare's free plan (Workers + D1) |
 
@@ -137,7 +139,8 @@ Desk Buddy grew from there, with a few bumps along the way:
 - **Spotify** sometimes reports nothing playing through its AppleScript; play / pause once and it catches up. Music playing on another device (Spotify Connect) doesn't show.
 - **Apple Music covers** only show for songs that have artwork stored on your Mac.
 - **Speaker switching** changes your Mac's sound output, not Spotify Connect devices.
-- **Windows** is an early test version: no music or calendars yet, and as it isn't signed (that costs money), Windows may warn the first time: **More info › Run anyway**.
+- **Windows** is an early test version: calendars come from calendar links (Google, Outlook), as Windows' own calendar can't be read; and as it isn't signed (that costs money), Windows may warn the first time: **More info › Run anyway**.
+- **Windows Defender flagged an early test version as `Trojan:Win32/Sabsik.TE.A!ml`.** The `!ml` means it was a machine-learning guess, not a known virus: it's a common false alarm for small unsigned programs. What set it off in version 0.6 was the app running a hidden PowerShell command to eject the Kindle after copying Desk Buddy onto it. Since 0.6.2 it ejects the Kindle through Windows' own drive commands and runs no PowerShell or scripts at all. If Defender still complains, you can [report it to Microsoft as a false positive](https://www.microsoft.com/en-us/wdsi/filesubmission), and all the code is here to check.
 
 Something else? [Open an issue](../../issues).
 
