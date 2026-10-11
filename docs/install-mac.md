@@ -12,11 +12,11 @@ Needs macOS 13 Ventura or newer.
 
 ## Install
 
-1. Download **Desk Buddy for Mac** (`.zip`) from [Releases](../../../releases) and open the zip.
-2. Drag **Desk Buddy** into your **Applications** folder.
-3. Open it. The first time, macOS warns that it can't check the app (see [Before you download](#before-you-download)). Allow it once:
+1. Download **Desk Buddy for Mac** (`.zip`) from [Releases](../../../releases) and open the zip (double-click it in Downloads).
+2. Open **Desk Buddy**. The first time, macOS warns that it can't check the app (see [Before you download](#before-you-download)). Allow it once:
    - **macOS 15 Sequoia and newer:** click **Done** on the warning, then open **System Settings › Privacy & Security**, scroll down to *"Desk Buddy" was blocked…* and click **Open Anyway** (it asks for your password). Open Desk Buddy again and click **Open**.
-   - **macOS 13–14:** **right-click** (or Control-click) Desk Buddy in Applications › **Open**, then **Open** again.
+   - **macOS 13–14:** **right-click** (or Control-click) Desk Buddy › **Open**, then **Open** again.
+3. Desk Buddy asks to **move itself to your Applications folder**: click **Move to Applications**. It opens again from there. (No dragging needed. You can also drag it into Applications yourself first.)
 4. The **welcome** walks you through it:
    - what Desk Buddy does,
    - the permissions (each one is optional and only adds what it says),
