@@ -76,7 +76,7 @@ Optional: your own free **Cloudflare** server, so the Kindle and your phone keep
 
 About 15 minutes, once.
 
-1. **Mac**: download *Desk Buddy for Mac* from [Releases](../../releases) (about 50 MB), move it to Applications and open it. It walks you through what it needs. → [docs/install-mac.md](docs/install-mac.md)
+1. **Mac**: download *Desk Buddy for Mac* from [Releases](../../releases) (about 70 MB), move it to Applications and open it. It walks you through what it needs. → [docs/install-mac.md](docs/install-mac.md)
 
    > **Heads-up:** the app isn't signed by Apple (that needs a paid developer membership), so the first time, macOS warns it can't check the app. Allow it once: on macOS 15 and newer in **System Settings › Privacy & Security › Open Anyway**; on macOS 13–14 by **right-clicking › Open**. [Why, and what that means](docs/install-mac.md#before-you-download).
 2. **Kindle**: plug it into your Mac with USB. Desk Buddy says **Kindle found**: click **Put Desk Buddy on it**. It copies itself over, checks every file landed, and ejects the Kindle. Unplug it and open **Desk Buddy** from the Kindle's library. (Prefer doing it by hand? → [docs/install-kindle.md](docs/install-kindle.md))
@@ -131,7 +131,7 @@ Desk Buddy grew from there, with a few bumps along the way:
 - **Only the Paperwhite 2** works for now (see [Compatibility](#compatibility)).
 - **The first install needs USB.** On macOS 26, USB with Kindles can be flaky (the drive disconnects, or files you copied don't stick). Copy, eject properly, and check the files are there; tips in [docs/install-kindle.md](docs/install-kindle.md).
 - **The Mac app isn't signed** by Apple yet (a paid developer membership): the first time, allow it once in System Settings › Privacy & Security › **Open Anyway** (macOS 15+) or with right-click › **Open** (macOS 13–14). macOS may also ask for its permissions again after each update.
-- **The Mac download is about 60 MB**, because it carries Desk Buddy's server for both Apple Silicon and Intel Macs.
+- **The Mac download is about 70 MB**, because it carries Desk Buddy's server for both Apple Silicon and Intel Macs.
 - **The downloads are brand new.** They're built and checked, but haven't been tried yet on a fresh Mac, an Intel Mac or someone else's PC. If something doesn't work, please [open an issue](../../issues).
 - **On "This Mac"** (the default), the Kindle only updates while your Mac is awake, on the same Wi-Fi, with Desk Buddy open. It shows your last screen meanwhile and catches up when the Mac is back. Want it always on? Use your own [cloud server](docs/cloud.md).
 - **After the Kindle restarts**, open Desk Buddy from the library again (it doesn't start by itself).
