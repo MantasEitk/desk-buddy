@@ -50,9 +50,16 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self?.showWindow()
         }
         // Start at login: install.sh sets up a LaunchAgent; a downloaded copy registers itself
-        // as a login item instead (System Settings › General › Login Items can turn it off)
-        if !FileManager.default.fileExists(atPath: agentPlist.path), SMAppService.mainApp.status != .enabled {
+        // as a login item instead (System Settings › General › Login Items can turn it off),
+        // unless it was switched off in About › Start at login
+        if !FileManager.default.fileExists(atPath: agentPlist.path), !UserDefaults.standard.bool(forKey: "noLoginItem"),
+           SMAppService.mainApp.status != .enabled {
             try? SMAppService.mainApp.register()
+        }
+        model.startAtLogin = App.startsAtLogin
+        model.onStartAtLogin = { [weak self] on in
+            App.setStartAtLogin(on)
+            self?.model.startAtLogin = App.startsAtLogin
         }
         // About › Updates: the version and its patch notes; look for a newer one a minute after
         // starting, then every 6 hours (Updater.swift)
@@ -615,6 +622,22 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         Updater.install(r, server: backend.address, key: backend.settings.key) { [weak self] s, busy in
             self?.model.updStatus = s
             self?.model.updBusy = busy
+        }
+    }
+
+    // About › Start at login: the LaunchAgent (install.sh) or the login item (downloaded copies)
+    static var startsAtLogin: Bool {
+        FileManager.default.fileExists(atPath: agentPlist.path) || SMAppService.mainApp.status == .enabled
+    }
+
+    static func setStartAtLogin(_ on: Bool) {
+        UserDefaults.standard.set(!on, forKey: "noLoginItem")
+        if on {
+            if !FileManager.default.fileExists(atPath: agentPlist.path) { try? SMAppService.mainApp.register() }
+        } else {
+            try? SMAppService.mainApp.unregister()
+            // launchd keeps today's copy running; without the file it won't start it at the next login
+            try? FileManager.default.removeItem(at: agentPlist)
         }
     }
 

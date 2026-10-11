@@ -76,6 +76,8 @@ final class HelperModel: ObservableObject {
     @Published var updChecking = false
     @Published var whatsNew = false
     var onCheckUpdate: () -> Void = {}
+    @Published var startAtLogin = true
+    var onStartAtLogin: (Bool) -> Void = { _ in }
     // Putting Desk Buddy on a Kindle over USB (KindleSetup.swift): "waiting" (no Kindle plugged
     // in), "found", "copying", "checking", "ejecting", "done", "failed"
     @Published var kSetupState = "waiting"
@@ -1149,7 +1151,10 @@ struct HelperWindow: View {
             updatesSection
             SpacedLabel(text: "Desk Buddy").padding(.top, 22)
             Row(title: "Welcome", hint: "The first-open guide: what it does, permissions, connecting the Kindle") { Pill(title: "Show again") { model.afterUpdate = false; model.welcomeStep = 0 } }
-            Row(title: "Quit", hint: "Stops until you open it again, or log in next time") { Pill(title: "Quit") { model.onQuit() } }
+            Row(title: "Start at login", hint: "Opens by itself when you log in to this Mac, so the Kindle always has it") {
+                Segmented(labels: ["On", "Off"], selected: model.startAtLogin ? 0 : 1) { model.onStartAtLogin($0 == 0) }
+            }
+            Row(title: "Quit", hint: model.startAtLogin ? "Stops until you open it again, or log in next time" : "Stops until you open it again") { Pill(title: "Quit") { model.onQuit() } }
             Row(title: "Uninstall", hint: "Removes the helper from this Mac. Asks first.") { Pill(title: "Uninstall…") { model.onUninstall() } }
         default:
             SpacedLabel(text: "This Mac")
