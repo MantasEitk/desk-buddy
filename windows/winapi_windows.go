@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -108,4 +109,45 @@ const serverExe = "desk-buddy-server.exe"
 // hideWindow: the server is a console program; no black window, please.
 func hideWindow(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000} // CREATE_NO_WINDOW
+}
+
+// ejectDrive ejects a removable drive (`E:\`) the way Explorer's Eject does: lock it, take
+// it offline, allow removal, eject (the steps Microsoft documents for ejecting media).
+// (0.6 ran PowerShell for this, and Defender's guesser flagged the app as a trojan.)
+func ejectDrive(d string) bool {
+	if len(d) < 2 {
+		return false
+	}
+	path, err := windows.UTF16PtrFromString(`\\.\` + d[:2])
+	if err != nil {
+		return false
+	}
+	h, err := windows.CreateFile(path, windows.GENERIC_READ|windows.GENERIC_WRITE, windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE, nil, windows.OPEN_EXISTING, 0, 0)
+	if err != nil {
+		return false
+	}
+	defer windows.CloseHandle(h)
+	const (
+		fsctlLockVolume        = 0x00090018
+		fsctlDismountVolume    = 0x00090020
+		ioctlStorageRemoval    = 0x002D4804
+		ioctlStorageEjectMedia = 0x002D4808
+	)
+	var n uint32
+	io := func(code uint32, in *byte, size uint32) error {
+		return windows.DeviceIoControl(h, code, in, size, nil, 0, &n, nil)
+	}
+	locked := false
+	for i := 0; i < 10 && !locked; i++ { // something may still have a file open for a moment
+		locked = io(fsctlLockVolume, nil, 0) == nil
+		if !locked {
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+	if !locked || io(fsctlDismountVolume, nil, 0) != nil {
+		return false
+	}
+	allow := byte(0) // PREVENT_MEDIA_REMOVAL { PreventMediaRemoval: false }
+	io(ioctlStorageRemoval, &allow, 1)
+	return io(ioctlStorageEjectMedia, nil, 0) == nil
 }

@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.6.2",
+    "date": "2026-10-11",
+    "items": [
+      "Fixed: Windows Defender could flag Desk Buddy as a threat. It no longer uses PowerShell to eject the Kindle",
+      "Added: a green \"Kindle connected\" badge on Home"
+    ]
+  },
+  {
     "version": "0.6.1",
     "date": "2026-10-10",
     "items": [

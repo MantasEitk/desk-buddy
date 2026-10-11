@@ -206,18 +206,6 @@ func installKindle() {
 	setKS("done", note)
 }
 
-// ejectDrive asks Windows to eject it, as Explorer's Eject does.
-func ejectDrive(d string) bool {
-	if runtime.GOOS != "windows" {
-		return false
-	}
-	letter := strings.TrimSuffix(d, `\`)
-	cmd := exec.Command("powershell", "-NoProfile", "-Command",
-		`(New-Object -ComObject Shell.Application).Namespace(17).ParseName('`+letter+`').InvokeVerb('Eject')`)
-	hideWindow(cmd)
-	return cmd.Run() == nil
-}
-
 const kindleSteps = `Putting Desk Buddy on your Kindle by hand
 
 Your Kindle needs to be jailbroken first, with the hotfix (kindlemodding.org).
