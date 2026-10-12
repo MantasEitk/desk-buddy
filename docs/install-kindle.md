@@ -1,6 +1,6 @@
 # Desk Buddy on the Kindle
 
-Tested on the **Kindle Paperwhite 2** (6th gen, 2013) with firmware 5.12.x. Other models aren't supported yet (see [Compatibility](../README.md#compatibility)).
+Tested on the **Kindle Paperwhite 2** (6th gen, 2013) with firmware 5.12.x, the only Kindle I have. Other models are untested: see [Compatibility](../README.md#compatibility) for my best guess.
 
 ## 1. Jailbreak the Kindle
 
