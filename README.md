@@ -157,11 +157,11 @@ Something else? [Open an issue](../../issues).
 
 ## Privacy
 
+**In short:** your tasks, calendar and everything else stay on your own computer (or your own cloud server, if you set one up). There's no Desk Buddy server, no account and no tracking.
+
 Your data only goes to **your own** Desk Buddy server: on your Mac (the default), or in your own Cloudflare account if you set one up. There's no Desk Buddy company server, no ads, no tracking, no analytics, and nothing is sold or shared.
 
 Two things leave your network on purpose: the weather asks [Open-Meteo](https://open-meteo.com) for your town's forecast, and album covers come from Spotify.
-
-In short: your tasks, calendar and everything else stay on your own computer. There's no Desk Buddy server, no account and no tracking.
 
 **Every permission explained** (calendar, music, Bluetooth), what it reads, why, and where it goes: [docs/privacy.md](docs/privacy.md).
 
