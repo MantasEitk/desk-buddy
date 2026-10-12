@@ -12,7 +12,7 @@
 <p align="center">
   <a href="../../releases/latest/download/Desk-Buddy-for-Mac.zip"><img src="https://img.shields.io/badge/Download_for_Mac-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac" height="44"></a>
   &nbsp;
-  <a href="../../releases/latest/download/Desk-Buddy-for-Windows.zip"><img src="https://img.shields.io/badge/Download_for_Windows-000000?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows" height="44"></a>
+  <a href="../../releases/latest/download/Desk-Buddy-for-Windows.zip"><img src="https://img.shields.io/badge/Download_for_Windows-000000?style=for-the-badge&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0zIDNoOC41djguNUgzek0xMi41IDNIMjF2OC41aC04LjV6TTMgMTIuNWg4LjVWMjFIM3pNMTIuNSAxMi41SDIxVjIxaC04LjV6Ii8+PC9zdmc+" alt="Download for Windows" height="44"></a>
 </p>
 <p align="center"><sub>The Kindle app comes with it: plug your jailbroken Kindle in and click once. <a href="#download">More download options</a></sub></p>
 
