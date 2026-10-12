@@ -157,6 +157,10 @@ Desk Buddy grew from there, with a few bumps along the way:
 
 Something else? [Open an issue](../../issues).
 
+## How much it uses
+
+The Kindle talks to Desk Buddy on your computer, and the app uses very little: on my Mac it sits at about **0% CPU** and around **110 MB of memory** in total (the app, its small server and its music helper), roughly what one browser tab uses. The **Performance** page in the app shows what it's using on yours, live. I tuned it on my own hardware, so if anything there looks out of the ordinary on your computer, quit the app and [let me know](../../issues).
+
 ## Privacy
 
 **In short:** your tasks, calendar and everything else stay on your own computer (or your own cloud server, if you set one up). There's no Desk Buddy server, no account and no tracking.
