@@ -932,8 +932,9 @@ struct HelperWindow: View {
         }
         ForEach(model.tasks) { t in
             taskRow(t, c)
-            if addingSub == t.id || (addingSub != nil && t.sub && t.parent == addingSub && model.tasks.last(where: { $0.parent == addingSub })?.id == t.id) {
-                subField(addingSub!, c)
+            // the new-subtask field: under the group's last subtask (or the task, without any)
+            if let p = addingSub, t.id == (model.tasks.last(where: { $0.parent == p })?.id ?? p) {
+                subField(p, c)
             }
         }
         // the end of the list: drop here to move a task to the bottom (out of any group)
@@ -953,6 +954,7 @@ struct HelperWindow: View {
     @State private var dropOn: (id: Int, into: Bool)? = nil
     @State private var dropEnd = false
     @State private var addingSub: Int? = nil
+    @FocusState private var subFocus: Bool
     @State private var subText = ""
 
     // the dragged task's id, from the drop
@@ -974,85 +976,109 @@ struct HelperWindow: View {
         }
     }
 
+    // subField: type a subtask, Enter adds it and stays open for the next one (like Notion);
+    // Esc, Enter on an empty field, or clicking away closes it
     func subField(_ parent: Int, _ c: Ink) -> some View {
         HStack(spacing: 10) {
             Image(systemName: "plus").font(.system(size: 10, weight: .bold)).foregroundColor(c.grey).frame(width: 20)
             TextField("Add a subtask", text: $subText)
                 .textFieldStyle(.plain).font(KD.font(13)).foregroundColor(c.ink)
+                .focused($subFocus)
+                .onAppear { DispatchQueue.main.async { subFocus = true } }
                 .onSubmit {
                     let v = subText.trimmingCharacters(in: .whitespaces)
-                    if !v.isEmpty { model.onTask("addsub", parent, v) }
+                    if v.isEmpty { addingSub = nil; return }
+                    model.onTask("addsub", parent, v)
                     subText = ""
-                    addingSub = nil
+                    DispatchQueue.main.async { subFocus = true }
                 }
                 .onExitCommand { addingSub = nil; subText = "" }
+                .onChange(of: subFocus) { focused in
+                    // the field moves down after each new subtask (a new view, which takes the
+                    // focus back): only close when the focus is still gone a moment later
+                    guard !focused else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        guard !subFocus, addingSub == parent else { return }
+                        let v = subText.trimmingCharacters(in: .whitespaces)
+                        if !v.isEmpty { model.onTask("addsub", parent, v) }
+                        subText = ""; addingSub = nil
+                    }
+                }
         }
-        .padding(.vertical, 6).padding(.leading, 30)
-        .overlay(Rectangle().fill(c.line).frame(height: 1), alignment: .bottom)
+        .frame(minHeight: 26).padding(.vertical, 2).padding(.horizontal, 6).padding(.leading, 30)
+        .overlay(Rectangle().fill(c.line).frame(height: 1).padding(.leading, 30), alignment: .bottom)
     }
+
+    func startSub(_ id: Int) { subText = ""; addingSub = id }
 
     func taskRow(_ t: HelperModel.TaskItem, _ c: Ink) -> some View {
         let size: CGFloat = t.sub ? 14 : 17
         let target = dropOn?.id == t.id
-        return VStack(spacing: 0) {
-            // where it would land: a line above (before this task)
-            Rectangle().fill(target && dropOn?.into == false ? c.ink : Color.clear).frame(height: 2)
-                .padding(.leading, t.sub ? 30 : 0)
-            // Like Notion: nothing moves on hover. A handle (the only part that drags) and the
-            // buttons fade in, in space that's always kept for them; click the text to edit it.
-            HStack(spacing: 8) {
-                Image(systemName: "line.3.horizontal").font(.system(size: 11, weight: .medium)).foregroundColor(c.grey)
-                    .frame(width: 16, height: 22).contentShape(Rectangle())
-                    .opacity(hovered == t.id && editing != t.id ? 1 : 0)
-                    .help("Drag to move")
-                    .onDrag { NSItemProvider(object: String(t.id) as NSString) }
-                Button { model.onTask("toggle", t.id, "") } label: {
-                    ZStack {
-                        Circle().stroke(c.ink, lineWidth: 1.5).frame(width: size, height: size)
-                        if t.done {
-                            Circle().fill(c.ink).frame(width: size, height: size)
-                            Image(systemName: "checkmark").font(.system(size: size * 0.5, weight: .heavy)).foregroundColor(c.paper)
+        let show = hovered == t.id && editing != t.id
+        // Like Notion: nothing moves on hover. The handle (the only part that drags) sits in the
+        // margin left of the list, the buttons fade in on the right in space that's always kept
+        // for them, and clicking the text edits it. Rows, dividers and the highlight line up.
+        return HStack(spacing: 0) {
+            Color.clear.frame(width: t.sub ? 30 : 0) // a subtask's indent
+            Image(systemName: "line.3.horizontal").font(.system(size: 11, weight: .medium)).foregroundColor(c.grey)
+                .frame(width: 24, height: 28).contentShape(Rectangle())
+                .opacity(show ? 1 : 0)
+                .help("Drag to move")
+                .onDrag { NSItemProvider(object: String(t.id) as NSString) }
+            VStack(spacing: 0) {
+                // where it would land: a line above (before this task)
+                Rectangle().fill(target && dropOn?.into == false ? c.ink : Color.clear).frame(height: 2)
+                HStack(spacing: 10) {
+                    Button { model.onTask("toggle", t.id, "") } label: {
+                        ZStack {
+                            Circle().stroke(c.ink, lineWidth: 1.5).frame(width: size, height: size)
+                            if t.done {
+                                Circle().fill(c.ink).frame(width: size, height: size)
+                                Image(systemName: "checkmark").font(.system(size: size * 0.5, weight: .heavy)).foregroundColor(c.paper)
+                            }
                         }
+                        .frame(width: 20, height: 20).contentShape(Rectangle())
                     }
-                    .frame(width: 20, height: 20).contentShape(Rectangle())
+                    .buttonStyle(.plain).accessibilityLabel(t.done ? "Mark not done" : "Mark done")
+                    if editing == t.id {
+                        TextField("", text: $editText)
+                            .textFieldStyle(.plain).font(KD.font(t.sub ? 13 : 14)).foregroundColor(c.ink)
+                            .focused($editFocus)
+                            .onAppear { editFocus = true }
+                            .onSubmit { finishEdit(t) }
+                            .onExitCommand { editing = nil }
+                            .onChange(of: editFocus) { focused in if !focused { finishEdit(t) } }
+                    } else {
+                        Text(t.text).font(KD.font(t.sub ? 13 : 14)).foregroundColor(t.done ? c.grey : c.ink)
+                            .strikethrough(t.done).lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                            .onTapGesture { editText = t.text; editing = t.id }
+                            .help("Click to edit")
+                    }
+                    if t.pinned {
+                        Image(systemName: "pin.fill").font(.system(size: 10)).foregroundColor(c.ink).help("Pinned: “Now working on” on the Kindle")
+                    }
+                    HStack(spacing: 0) {
+                        if !t.sub { iconButton("plus", "Add a subtask", c) { startSub(t.id) } }
+                        if !t.sub { iconButton(t.pinned ? "pin.slash" : "pin", t.pinned ? "Unpin" : "Pin to the Kindle", c) { model.onTask("pin", t.id, "") } }
+                        iconButton("trash", "Delete", c) { model.onTask("delete", t.id, "") }
+                    }
+                    .frame(width: 72, alignment: .trailing)
+                    .opacity(show ? 1 : 0).allowsHitTesting(show)
                 }
-                .buttonStyle(.plain).accessibilityLabel(t.done ? "Mark not done" : "Mark done")
-                if editing == t.id {
-                    TextField("", text: $editText)
-                        .textFieldStyle(.plain).font(KD.font(t.sub ? 13 : 14)).foregroundColor(c.ink)
-                        .focused($editFocus)
-                        .onAppear { editFocus = true }
-                        .onSubmit { finishEdit(t) }
-                        .onExitCommand { editing = nil }
-                        .onChange(of: editFocus) { focused in if !focused { finishEdit(t) } }
-                } else {
-                    Text(t.text).font(KD.font(t.sub ? 13 : 14)).foregroundColor(t.done ? c.grey : c.ink)
-                        .strikethrough(t.done).lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                        .onTapGesture { editText = t.text; editing = t.id }
-                        .help("Click to edit")
-                }
-                if t.pinned {
-                    Image(systemName: "pin.fill").font(.system(size: 10)).foregroundColor(c.ink).help("Pinned: “Now working on” on the Kindle")
-                }
-                let show = hovered == t.id && editing != t.id
-                HStack(spacing: 0) {
-                    if !t.sub { iconButton("plus", "Add a subtask", c) { addingSub = t.id; subText = "" } }
-                    if !t.sub { iconButton(t.pinned ? "pin.slash" : "pin", t.pinned ? "Unpin" : "Pin to the Kindle", c) { model.onTask("pin", t.id, "") } }
-                    iconButton("trash", "Delete", c) { model.onTask("delete", t.id, "") }
-                }
-                .frame(width: 72, alignment: .trailing)
-                .opacity(show ? 1 : 0).allowsHitTesting(show)
+                .frame(minHeight: t.sub ? 26 : 30)
+                .padding(.vertical, t.sub ? 2 : 3).padding(.horizontal, 6)
+                .background(RoundedRectangle(cornerRadius: 6).fill(hovered == t.id || editing == t.id ? c.hover : Color.clear))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(target && dropOn?.into == true ? c.ink : Color.clear, lineWidth: 1.5))
+                Rectangle().fill(c.line).frame(height: 1)
             }
-            .frame(minHeight: t.sub ? 26 : 30)
-            .padding(.vertical, t.sub ? 2 : 3).padding(.horizontal, 4)
-            .background(RoundedRectangle(cornerRadius: 6).fill(hovered == t.id || editing == t.id ? c.hover : Color.clear))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(target && dropOn?.into == true ? c.ink : Color.clear, lineWidth: 1.5))
-            .padding(.leading, t.sub ? 30 : 0)
-            Rectangle().fill(c.line).frame(height: 1).padding(.leading, t.sub ? 30 : 0)
         }
+        .padding(.leading, -24) // the handle hangs in the margin, so the rows line up with "Add a task"
         .contentShape(Rectangle())
-        .onHover { hovered = $0 ? t.id : (hovered == t.id ? nil : hovered) }
+        .onHover { inside in
+            hovered = inside ? t.id : (hovered == t.id ? nil : hovered)
+            if inside { dropOn = nil; dropEnd = false } // a drag that ended elsewhere left its marker
+        }
         .onDrop(of: [.text], delegate: RowDrop(row: t, onMove: { into in dropOn = (t.id, into) },
                                                 onLeave: { if dropOn?.id == t.id { dropOn = nil } },
                                                 onDrop: { into, items in
@@ -1063,7 +1089,7 @@ struct HelperWindow: View {
             Button(t.done ? "Mark not done" : "Mark done") { model.onTask("toggle", t.id, "") }
             Button("Rename") { editText = t.text; editing = t.id }
             if !t.sub {
-                Button("Add a subtask") { addingSub = t.id; subText = "" }
+                Button("Add a subtask") { startSub(t.id) }
                 Button(t.pinned ? "Unpin" : "Pin to the Kindle") { model.onTask("pin", t.id, "") }
             } else {
                 Button("Move out of the group") { // to just after its group, at the top level
