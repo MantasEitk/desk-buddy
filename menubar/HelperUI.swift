@@ -142,6 +142,7 @@ struct Ink {
     var paper: Color { scheme == .dark ? Color(white: 0.086) : .white }
     var grey: Color { scheme == .dark ? Color(white: 0.66) : Color(white: 0.3) }
     var line: Color { scheme == .dark ? Color(white: 0.24) : Color(white: 0.85) }
+    var hover: Color { scheme == .dark ? Color(white: 0.14) : Color(white: 0.955) } // a row under the pointer
 }
 
 // "UPDATES": small bold capitals, spaced out, grey
@@ -686,6 +687,7 @@ struct HelperWindow: View {
     }
     @AppStorage("sidebarCollapsed") private var collapsed = false
     @State private var editing: Int? = nil   // the task being renamed
+    @FocusState private var editFocus: Bool  // its text field (clicking away saves)
     @State private var editText = ""
     @State private var hovered: Int? = nil
 
@@ -942,7 +944,7 @@ struct HelperWindow: View {
                 return true
             }
         if !model.tasks.isEmpty {
-            Text("Drag a task to move it: onto another task to put it in that group, or between tasks. Right-click for more.")
+            Text("Click a task to edit it. To move one, drag the handle ≡ that shows on its left: onto another task to put it in that group, or between tasks. Right-click for more.")
                 .font(KD.font(11)).foregroundColor(c.grey)
         }
     }
@@ -996,7 +998,14 @@ struct HelperWindow: View {
             // where it would land: a line above (before this task)
             Rectangle().fill(target && dropOn?.into == false ? c.ink : Color.clear).frame(height: 2)
                 .padding(.leading, t.sub ? 30 : 0)
-            HStack(spacing: 10) {
+            // Like Notion: nothing moves on hover. A handle (the only part that drags) and the
+            // buttons fade in, in space that's always kept for them; click the text to edit it.
+            HStack(spacing: 8) {
+                Image(systemName: "line.3.horizontal").font(.system(size: 11, weight: .medium)).foregroundColor(c.grey)
+                    .frame(width: 16, height: 22).contentShape(Rectangle())
+                    .opacity(hovered == t.id && editing != t.id ? 1 : 0)
+                    .help("Drag to move")
+                    .onDrag { NSItemProvider(object: String(t.id) as NSString) }
                 Button { model.onTask("toggle", t.id, "") } label: {
                     ZStack {
                         Circle().stroke(c.ink, lineWidth: 1.5).frame(width: size, height: size)
@@ -1011,42 +1020,39 @@ struct HelperWindow: View {
                 if editing == t.id {
                     TextField("", text: $editText)
                         .textFieldStyle(.plain).font(KD.font(t.sub ? 13 : 14)).foregroundColor(c.ink)
-                        .onSubmit {
-                            let v = editText.trimmingCharacters(in: .whitespaces)
-                            if !v.isEmpty && v != t.text { model.onTask("rename", t.id, v) }
-                            editing = nil
-                        }
+                        .focused($editFocus)
+                        .onAppear { editFocus = true }
+                        .onSubmit { finishEdit(t) }
                         .onExitCommand { editing = nil }
+                        .onChange(of: editFocus) { focused in if !focused { finishEdit(t) } }
                 } else {
                     Text(t.text).font(KD.font(t.sub ? 13 : 14)).foregroundColor(t.done ? c.grey : c.ink)
-                        .strikethrough(t.done)
+                        .strikethrough(t.done).lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                        .onTapGesture(count: 2) { editText = t.text; editing = t.id }
-                        .help("Double-click to rename · drag to move")
+                        .onTapGesture { editText = t.text; editing = t.id }
+                        .help("Click to edit")
                 }
                 if t.pinned {
                     Image(systemName: "pin.fill").font(.system(size: 10)).foregroundColor(c.ink).help("Pinned: “Now working on” on the Kindle")
                 }
-                if hovered == t.id && editing != t.id { // actions, while the pointer is over the task
-                    HStack(spacing: 2) {
-                        if !t.sub { iconButton("plus", "Add a subtask", c) { addingSub = t.id; subText = "" } }
-                        if !t.sub { iconButton(t.pinned ? "pin.slash" : "pin", t.pinned ? "Unpin" : "Pin to the Kindle", c) { model.onTask("pin", t.id, "") } }
-                        iconButton("pencil", "Rename", c) { editText = t.text; editing = t.id }
-                        iconButton("trash", "Delete", c) { model.onTask("delete", t.id, "") }
-                    }
+                let show = hovered == t.id && editing != t.id
+                HStack(spacing: 0) {
+                    if !t.sub { iconButton("plus", "Add a subtask", c) { addingSub = t.id; subText = "" } }
+                    if !t.sub { iconButton(t.pinned ? "pin.slash" : "pin", t.pinned ? "Unpin" : "Pin to the Kindle", c) { model.onTask("pin", t.id, "") } }
+                    iconButton("trash", "Delete", c) { model.onTask("delete", t.id, "") }
                 }
-                Image(systemName: "line.3.horizontal").font(.system(size: 10)).foregroundColor(c.grey.opacity(hovered == t.id ? 1 : 0))
-                    .help("Drag to move")
+                .frame(width: 72, alignment: .trailing)
+                .opacity(show ? 1 : 0).allowsHitTesting(show)
             }
-            .padding(.vertical, t.sub ? 5 : 8).padding(.horizontal, 4)
+            .frame(minHeight: t.sub ? 26 : 30)
+            .padding(.vertical, t.sub ? 2 : 3).padding(.horizontal, 4)
+            .background(RoundedRectangle(cornerRadius: 6).fill(hovered == t.id || editing == t.id ? c.hover : Color.clear))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(target && dropOn?.into == true ? c.ink : Color.clear, lineWidth: 1.5))
             .padding(.leading, t.sub ? 30 : 0)
-            .background(RoundedRectangle(cornerRadius: 6).stroke(target && dropOn?.into == true ? c.ink : Color.clear, lineWidth: 1.5)
-                .padding(.leading, t.sub ? 30 : 0))
             Rectangle().fill(c.line).frame(height: 1).padding(.leading, t.sub ? 30 : 0)
         }
         .contentShape(Rectangle())
         .onHover { hovered = $0 ? t.id : (hovered == t.id ? nil : hovered) }
-        .onDrag { NSItemProvider(object: String(t.id) as NSString) }
         .onDrop(of: [.text], delegate: RowDrop(row: t, onMove: { into in dropOn = (t.id, into) },
                                                 onLeave: { if dropOn?.id == t.id { dropOn = nil } },
                                                 onDrop: { into, items in
@@ -1080,6 +1086,14 @@ struct HelperWindow: View {
                 .frame(width: 24, height: 22).contentShape(Rectangle())
         }
         .buttonStyle(.plain).help(help).accessibilityLabel(help)
+    }
+
+    // finishEdit saves a rename (Enter, or clicking away); empty or unchanged: nothing
+    func finishEdit(_ t: HelperModel.TaskItem) {
+        guard editing == t.id else { return }
+        let v = editText.trimmingCharacters(in: .whitespaces)
+        if !v.isEmpty && v != t.text { model.onTask("rename", t.id, v) }
+        editing = nil
     }
 
     func addTask() {

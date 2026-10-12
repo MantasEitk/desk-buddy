@@ -45,9 +45,11 @@ input[type=text]{font:inherit;font-size:14px;border:0;border-bottom:1px solid va
 .task.over-top{box-shadow:inset 0 2px 0 var(--ink)}.task.over-in{outline:1.5px dashed var(--ink);outline-offset:-2px}
 .tick{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--ink);background:none;flex:none;cursor:pointer;display:grid;place-items:center;padding:0;color:var(--paper);font-size:11px;font-weight:700}
 .task.done .tick{background:var(--ink)}
-.task .tx{flex:1;font-size:14px;cursor:default;user-select:text}
+.task .tx{flex:1;font-size:14px;cursor:text;user-select:none;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.txedit{flex:1;min-width:0;font:inherit;font-size:14px;border:0;outline:0;background:none;padding:0;margin:0;color:var(--ink);height:20px}
+.grip{width:16px;flex:none;color:var(--soft);cursor:grab;opacity:0;user-select:none;text-align:center;font-size:13px;line-height:20px}.task:hover .grip{opacity:1}.grip:active{cursor:grabbing}
 .task.done .tx{text-decoration:line-through;color:var(--soft)}
-.acts{display:none;gap:2px}.task:hover .acts{display:flex}
+.acts{display:flex;gap:2px;width:96px;justify-content:flex-end;flex:none;visibility:hidden}.task:hover .acts{visibility:visible}
 .ic{border:0;background:none;color:var(--ink);cursor:pointer;padding:3px 6px;border-radius:5px;font-size:12px;font-weight:700}.ic:hover{background:var(--line)}
 .endzone{height:28px}
 .needs{display:flex;align-items:center;gap:10px;border:1px solid var(--ink);border-radius:8px;padding:9px 12px;margin-bottom:8px}
@@ -220,10 +222,10 @@ function homePage() {
   const tasks = state ? (state.tasks[l] || []) : [];
   const top = tasks.filter((t) => !t.parent_id).sort((a, b) => a.pos - b.pos);
   const kids = (id) => tasks.filter((t) => t.parent_id === id).sort((a, b) => a.pos - b.pos);
-  const trow = (t, sub, n) => `<div class="task${t.done ? " done" : ""}${sub ? " sub" : ""}" draggable="true" data-id="${t.id}" data-sub="${sub ? 1 : 0}" data-kids="${n}">
-<button class="tick" title="${t.done ? "Mark not done" : "Done"}" data-a="toggle">${t.done ? "✓" : ""}</button>
-<span class="tx" title="Double-click to rename">${esc(t.text)}</span>${t.pinned ? `<span title="Now working on">📌</span>` : ""}
-<span class="acts">${sub ? "" : `<button class="ic" data-a="addsub" title="Add a subtask">＋</button>`}<button class="ic" data-a="pin" title="${t.pinned ? "Unpin" : "Now working on"}">${t.pinned ? "Unpin" : "Pin"}</button><button class="ic" data-a="up" title="Move up">↑</button><button class="ic" data-a="down" title="Move down">↓</button><button class="ic" data-a="del" title="Delete">✕</button></span></div>`;
+  const trow = (t, sub, n) => `<div class="task${t.done ? " done" : ""}${sub ? " sub" : ""}" data-id="${t.id}" data-sub="${sub ? 1 : 0}" data-kids="${n}">
+<span class="grip" draggable="true" title="Drag to move">⋮⋮</span><button class="tick" title="${t.done ? "Mark not done" : "Done"}" data-a="toggle">${t.done ? "✓" : ""}</button>
+<span class="tx" title="Click to edit">${esc(t.text)}</span>${t.pinned ? `<span title="Now working on">📌</span>` : ""}
+<span class="acts">${sub ? "" : `<button class="ic" data-a="addsub" title="Add a subtask">＋</button>`}<button class="ic" data-a="pin" title="${t.pinned ? "Unpin" : "Pin to the Kindle"}">${t.pinned ? "Unpin" : "Pin"}</button><button class="ic" data-a="del" title="Delete">✕</button></span></div>`;
   const rows = top.map((t) => trow(t, false, kids(t.id).length) + kids(t.id).map((k) => trow(k, true, 0)).join("")).join("");
   const needs = [];
   if (info.refused) needs.push(`<div class="needs"><b>Desk Buddy on your other computer doesn't know this PC any more</b><span class="sub">It was probably reinstalled. Join it again: this PC finds it on the Wi-Fi, then click Allow there.</span><button class="pill solid" style="margin-top:8px" onclick="if(confirm('Join again?\\n\\nThis PC forgets the old connection and looks for Desk Buddy on the Wi-Fi.'))act({do:'reset'}).then(refresh)">Join again</button></div>`);
@@ -237,7 +239,7 @@ function homePage() {
 <div class="sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(kl || "On the Kindle now")}${kstatus ? (Date.now() / 1000 - kstatus.at < 200 ? `<span class="badgeok" style="margin-top:0">✓ Kindle connected</span>` : `<span class="badgegrey" style="margin-top:0">Kindle offline</span>`) : ""}</div>
 <div class="add"><input type="text" id="newtask" placeholder="Add a task"><button class="pill solid" onclick="addTask()">Add</button></div>
 ${rows || `<p class="sub" style="margin-top:12px">No tasks yet. Add one above.</p>`}<div class="endzone" data-end="1"></div>
-<p class="sub" style="margin-top:8px">Drag a task to move it: onto another task to put it in that group, or between tasks. Double-click to rename, hover for more.</p>`;
+<p class="sub" style="margin-top:8px">Click a task to edit it. To move one, drag the handle ⋮⋮ that shows on its left: onto another task to put it in that group, or between tasks. Hover for more.</p>`;
 }
 function wireHome() {
   $("#newtask")?.addEventListener("keydown", (e) => { if (e.key === "Enter") addTask(); });
@@ -246,9 +248,11 @@ function wireHome() {
   document.querySelectorAll(".task").forEach((el) => {
     const id = +el.dataset.id;
     el.querySelectorAll("[data-a]").forEach((b) => b.onclick = () => taskAct(b.dataset.a, id, el));
-    el.querySelector(".tx").ondblclick = () => rename(id, el);
-    el.ondragstart = (e) => { dragId = id; dragging = true; e.dataTransfer.effectAllowed = "move"; };
-    el.ondragend = () => { dragging = false; clear(); };
+    el.querySelector(".tx").onclick = () => rename(id, el);
+    // only the handle drags (like Notion), showing the whole row while it moves
+    const grip = el.querySelector(".grip");
+    grip.ondragstart = (e) => { dragId = id; dragging = true; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setDragImage(el, 20, el.offsetHeight / 2); };
+    grip.ondragend = () => { dragging = false; clear(); };
     el.ondragover = (e) => {
       if (dragId === null || dragId === id) return;
       e.preventDefault(); clear();
@@ -278,7 +282,17 @@ async function taskAct(a, id, el) {
   if (a === "addsub") return inlineInput(el, "Add a subtask", (v) => api("POST", "/api/tasks", {profile: curList(), text: v, parent_id: id}));
   await refresh();
 }
-function rename(id, el) { const old = el.querySelector(".tx").textContent; inlineInput(el, "", async (v) => { if (v !== old) await api("PATCH", `/api/tasks/${id}`, {text: v}); }, old, true); }
+// rename: the text turns into a field right where it is (Enter or clicking away saves, Esc cancels)
+function rename(id, el) {
+  const tx = el.querySelector(".tx"), old = tx.textContent;
+  editing = true;
+  const i = document.createElement("input"); i.className = "txedit"; i.value = old;
+  tx.replaceWith(i); i.focus(); i.select();
+  let done = false;
+  const finish = async (ok) => { if (done) return; done = true; editing = false; const v = i.value.trim(); if (ok && v && v !== old) await api("PATCH", `/api/tasks/${id}`, {text: v}); await refresh(); };
+  i.onkeydown = (e) => { if (e.key === "Enter") finish(true); if (e.key === "Escape") finish(false); };
+  i.onblur = () => finish(true);
+}
 function inlineInput(el, ph, save, value = "", replace = false) {
   editing = true;
   const box = document.createElement("div"); box.className = "task" + ((replace ? el.dataset.sub === "1" : true) ? " sub" : "");

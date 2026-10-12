@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.9",
+    "date": "2026-10-12",
+    "items": [
+      "Changed: the task list works like Notion: nothing moves when you hover, click a task to edit it, drag the handle on its left to move it",
+      "Added: when Desk Buddy on your Mac was reinstalled, the PC says so and offers Join again"
+    ]
+  },
+  {
     "version": "0.8",
     "date": "2026-10-11",
     "items": [
