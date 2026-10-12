@@ -17,7 +17,7 @@ const feedbackEmail = "feedback@example.com"
 
 // helperURL is a placeholder too: where to download Desk Buddy (shown as a QR code on
 // the Deck of a computer that isn't connected). Replace before the public release.
-const helperURL = "https://github.com/MantasEitk/desk-buddy/releases"
+const helperURL = "https://github.com/deskbuddy-app/desk-buddy/releases"
 
 // aboutPane: Settings › About: who made this, where to send feedback (with a QR code to
 // scan), then version, updates and battery.
