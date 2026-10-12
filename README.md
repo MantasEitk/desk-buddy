@@ -161,7 +161,13 @@ Your data only goes to **your own** Desk Buddy server: on your Mac (the default)
 
 Two things leave your network on purpose: the weather asks [Open-Meteo](https://open-meteo.com) for your town's forecast, and album covers come from Spotify.
 
+In short: your tasks, calendar and everything else stay on your own computer. There's no Desk Buddy server, no account and no tracking.
+
 **Every permission explained** (calendar, music, Bluetooth), what it reads, why, and where it goes: [docs/privacy.md](docs/privacy.md).
+
+### A word of caution
+
+Even if I'm arguing against myself here: it's good practice not to download random apps from the internet and install them, and I completely agree with that. I've made sure Desk Buddy is safe, and all of its code is here for anyone to read. But if you're not sure what you're doing, maybe wait until someone more knowledgeable has had a look at it. Please be careful in general.
 
 ## More
 
