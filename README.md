@@ -100,7 +100,9 @@ From then on: everything happens on the Mac (Desk Buddy in the menu bar) or on t
 | | |
 |---|---|
 | **Kindle Paperwhite 2** (6th gen, 2013), firmware 5.12.x | ✅ Tested, daily use |
-| Other touch Kindles (Paperwhite 3 / 4 / 5, Oasis, Basic) | ❌ Not yet. The layout is made for the PW2's screen (1024 × 758) and touch panel. Support for other screens is planned. |
+| Kindle Paperwhite 1 (5th gen, 2012) | ❓ Untested. Probably works: same screen size as the PW2. |
+| Paperwhite 3 / 4 / 5, Voyage, Oasis | ❓ Untested. Might run, but would probably look wrong: the layout is made for the PW2's screen (1024 × 758) and these are bigger and sharper. Support for other screens is planned. |
+| Basic Kindles, Kindle Touch | ❌ Probably not: the screen is too small for the layout. |
 | Kindles without a touchscreen | ❌ No |
 | Jailbreak | The [kindlemodding.org](https://kindlemodding.org) jailbreak **with its hotfix** (it provides FBInk, the root helper and the script launcher Desk Buddy uses). KUAL isn't needed. |
 | Kindle Wi-Fi | 2.4 GHz, WPA2 (the Paperwhite 2 can't join 5 GHz-only or WPA3-only networks) |
@@ -139,7 +141,7 @@ Desk Buddy grew from there, with a few bumps along the way:
 
 ## Known issues
 
-- **Only the Paperwhite 2** works for now (see [Compatibility](#compatibility)).
+- **Only tested on the Paperwhite 2**, because it's the only Kindle I have. Other models are my best guess (see [Compatibility](#compatibility)). Tried it on another Kindle? Please [tell me](../../issues) how it went, good or bad.
 - **The first install needs USB.** On macOS 26, USB with Kindles can be flaky (the drive disconnects, or files you copied don't stick). Copy, eject properly, and check the files are there; tips in [docs/install-kindle.md](docs/install-kindle.md).
 - **The Mac app isn't signed** by Apple yet (a paid developer membership): the first time, allow it once in System Settings › Privacy & Security › **Open Anyway** (macOS 15+) or with right-click › **Open** (macOS 13–14). macOS may also ask for its permissions again after each update.
 - **The Mac download is about 70 MB**, because it carries Desk Buddy's server for both Apple Silicon and Intel Macs.
