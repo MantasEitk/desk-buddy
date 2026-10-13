@@ -35,7 +35,7 @@ type Editor struct {
 	SearchErr string
 }
 
-const kbTop = LH - 318 // where the keyboard starts
+var kbTop = LH - 318 // where the keyboard starts (setPanel moves it with LH)
 
 var kbLetters = [3]string{"qwertyuiop", "asdfghjkl", "zxcvbnm"}
 var kbSymbols = [3]string{"1234567890", "-/:;()£&@", "'?!#%+*"}

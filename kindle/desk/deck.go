@@ -4,12 +4,10 @@ package main
 
 import (
 	"image"
-	"image/draw"
 	"math"
 	"strings"
 
 	qrcode "github.com/skip2/go-qrcode"
-	xdraw "golang.org/x/image/draw"
 )
 
 // placeholderDeck stands in until the backend has a deck (the old Mac server doesn't):
@@ -247,11 +245,7 @@ func deckView(v *View, d *Desk, ui *UI) {
 		var m image.Rectangle
 		if icon := icons[name]; icon != nil && !placeholder {
 			m = image.Rect(cx-isz/2, r.Min.Y+(th-isz-labelH)/2, cx+isz/2, r.Min.Y+(th-isz-labelH)/2+isz)
-			if isz == iconSize {
-				draw.Draw(img, m, icon, image.Point{}, draw.Src)
-			} else {
-				xdraw.ApproxBiLinear.Scale(img, m, icon, icon.Rect, xdraw.Src, nil)
-			}
+			drawImage(img, m, icon)
 			box, rad := iconBox(isz) // one thin outline, so white icons keep their shape
 			strokeRoundRect(img, box.Add(m.Min), rad, 1.5, grey3)
 		} else {

@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	LW, LH  = 1024, 758 // landscape canvas
+	LW      = 1024 // the layout's width; its height LH is in gfx.go (it follows the panel)
 	barH    = 72
 	sideX   = 664 // left column | side column divider
 	pad     = 28
@@ -777,6 +777,8 @@ func standbyControls(v *View, st Status, ui *UI) {
 // centreRows moves whatever is drawn between rows top and bottom up or down so it
 // sits in the middle of that band.
 func centreRows(img *image.Gray, top, bottom int) {
+	s := scaleOf(img) // rows of pixels
+	top, bottom = px(top, s), px(bottom, s)
 	first, last := -1, -1
 	for y := top; y < bottom; y++ {
 		row := img.Pix[y*img.Stride : y*img.Stride+img.Rect.Dx()]
@@ -1019,9 +1021,9 @@ func standby(v *View, d *Desk, st Status, ui *UI) {
 	for i := 0; i < n; i++ {
 		x := float64(LW/2 + (i-n/2)*18)
 		if i == style%n {
-			fillCircle(img, x, LH-26, 4.5, grey2)
+			fillCircle(img, x, float64(LH-26), 4.5, grey2)
 		} else {
-			ringCircle(img, x, LH-26, 4.5, 1.5, grey3)
+			ringCircle(img, x, float64(LH-26), 4.5, 1.5, grey3)
 		}
 	}
 	v.add(Target{R: img.Rect, Act: "standbyctl"}) // tap: show the control bar (Back is on it)

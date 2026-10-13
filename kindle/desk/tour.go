@@ -164,9 +164,10 @@ func tourOverlay(v *View, d *Desk, ui *UI) {
 	}
 	// light up the parts being explained
 	for _, r := range lit {
-		r = r.Inset(-4).Intersect(img.Rect)
-		for yy := r.Min.Y; yy < r.Max.Y; yy++ {
-			copy(img.Pix[yy*img.Stride+r.Min.X:yy*img.Stride+r.Max.X], orig.Pix[yy*orig.Stride+r.Min.X:yy*orig.Stride+r.Max.X])
+		r = r.Inset(-4).Intersect(image.Rect(0, 0, LW, LH))
+		p := pxRect(img, r) // the pixels to bring back from the undimmed picture
+		for yy := p.Min.Y; yy < p.Max.Y; yy++ {
+			copy(img.Pix[yy*img.Stride+p.Min.X:yy*img.Stride+p.Max.X], orig.Pix[yy*orig.Stride+p.Min.X:yy*orig.Stride+p.Max.X])
 		}
 		strokeRoundRect(img, r.Inset(-2), 10, 2, ink)
 	}
@@ -178,7 +179,7 @@ func tourOverlay(v *View, d *Desk, ui *UI) {
 	drawBuddy(img, pad+14, by+6, 34, ink)
 	label(img, pad+38, by+30, "WELCOME TO DESK BUDDY", grey2)
 	for i := 0; i < tourPages; i++ {
-		cx := float64(pad + spacedW(face("uiBold", 13), "WELCOME TO DESK BUDDY", 2) + 24 + i*18)
+		cx := float64(pad + 38 + spacedW(face("uiBold", 13), "WELCOME TO DESK BUDDY", 2) + 24 + i*18) // after the label (it starts 38 in, past Desk Buddy)
 		if i+1 == ui.Tour {
 			fillCircle(img, cx, float64(by+25), 5, ink)
 		} else {

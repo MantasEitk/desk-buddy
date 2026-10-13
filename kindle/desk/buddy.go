@@ -49,13 +49,16 @@ func drawBuddy(img *image.Gray, cx, top, h int, c uint8) image.Rectangle {
 		return image.Rectangle{}
 	}
 	w := h * buddyMask.Rect.Dx() / buddyMask.Rect.Dy()
-	small := image.NewAlpha(image.Rect(0, 0, w, h))
-	xdraw.CatmullRom.Scale(small, small.Rect, buddyMask, buddyMask.Rect, xdraw.Src, nil)
 	x0 := cx - w/2
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
+	s := scaleOf(img) // drawn at the canvas's resolution
+	pw, ph := px(w, s), px(h, s)
+	small := image.NewAlpha(image.Rect(0, 0, pw, ph))
+	xdraw.CatmullRom.Scale(small, small.Rect, buddyMask, buddyMask.Rect, xdraw.Src, nil)
+	ox, oy := px(x0, s), px(top, s)
+	for y := 0; y < ph; y++ {
+		for x := 0; x < pw; x++ {
 			if a := small.Pix[y*small.Stride+x]; a > 0 {
-				blend(img, x0+x, top+y, c, float64(a)/255)
+				blendPx(img, ox+x, oy+y, c, float64(a)/255)
 			}
 		}
 	}

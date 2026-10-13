@@ -163,14 +163,15 @@ func cloud(img *image.Gray, cx, cy, w, t float64) {
 		return px >= lx && px <= rx && py >= by-rb-grow && py <= by+rb+grow
 	}
 	left, right, baseBot := cx-w*0.45, cx+w*0.45, by+rb
-	x0, x1 := int(left-t-2), int(right+t+2)
-	y0, y1 := int(cy-w*0.33-t-2), int(baseBot+t+2)
+	s := scaleOf(img) // drawn at the canvas's resolution
+	x0, x1 := int((left-t-2)*s), int((right+t+2)*s)
+	y0, y1 := int((cy-w*0.33-t-2)*s), int((baseBot+t+2)*s)
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
 			// 2×2 samples for smooth edges: outline ring, white inside.
 			outer, inner := 0, 0
 			for _, o := range [4][2]float64{{.25, .25}, {.75, .25}, {.25, .75}, {.75, .75}} {
-				px, py := float64(x)+o[0], float64(y)+o[1]
+				px, py := (float64(x)+o[0])/s, (float64(y)+o[1])/s
 				if inside(px, py, 0) {
 					inner++
 				}
@@ -179,10 +180,10 @@ func cloud(img *image.Gray, cx, cy, w, t float64) {
 				}
 			}
 			if outer > 0 {
-				blend(img, x, y, ink, float64(outer)/4)
+				blendPx(img, x, y, ink, float64(outer)/4)
 			}
 			if inner > 0 {
-				blend(img, x, y, paper, float64(inner)/4)
+				blendPx(img, x, y, paper, float64(inner)/4)
 			}
 		}
 	}

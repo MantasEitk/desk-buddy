@@ -80,7 +80,7 @@ func coverView(v *View, d *Desk, st Status, ui *UI) {
 			copy(draw.Pix, art.Pix)
 			invertRect(draw, draw.Rect)
 		}
-		xdraw.Copy(img, cr.Min, draw, draw.Rect, xdraw.Src, nil)
+		drawImage(img, cr, draw)
 		strokeRoundRect(img, cr, 2, 1.5, grey3)
 		v.add(Target{R: cr, Act: "coverfull"})
 	} else {
@@ -211,7 +211,8 @@ func bigArt(ui *UI) *image.Gray {
 		return nil
 	}
 	if ui.ArtBigKey != ui.ArtKey || ui.ArtBig == nil {
-		g := image.NewGray(image.Rect(0, 0, coverSize, coverSize))
+		n := px(coverSize, sc) // at the panel's resolution, so the dither pattern stays fine
+		g := image.NewGray(image.Rect(0, 0, n, n))
 		xdraw.CatmullRom.Scale(g, g.Rect, ui.Art, ui.Art.Rect, xdraw.Src, nil)
 		bayer16(g)
 		ui.ArtBig, ui.ArtBigKey = g, ui.ArtKey
@@ -393,14 +394,15 @@ func spotifyMark(img *image.Gray, cx, cy, r float64, c uint8) {
 	if spotifyImg == nil {
 		return
 	}
-	n := int(2 * r)
+	s := scaleOf(img) // at the canvas's resolution
+	n := int(2 * r * s)
 	mask := image.NewGray(image.Rect(0, 0, n, n))
 	xdraw.CatmullRom.Scale(mask, mask.Rect, spotifyImg, spotifyImg.Rect, xdraw.Src, nil)
-	x0, y0 := int(cx-r), int(cy-r)
+	x0, y0 := int((cx-r)*s), int((cy-r)*s)
 	for y := 0; y < n; y++ {
 		for x := 0; x < n; x++ {
 			if a := mask.Pix[y*mask.Stride+x]; a > 0 {
-				blend(img, x0+x, y0+y, c, float64(a)/255)
+				blendPx(img, x0+x, y0+y, c, float64(a)/255)
 			}
 		}
 	}

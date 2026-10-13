@@ -22,7 +22,6 @@ const (
 	fbinkBin = "/var/local/kmc/bin/fbink"
 	touchDev = "/dev/input/event1"
 	powerDev = "/dev/input/event0"
-	PW, PH   = 758, 1024 // portrait framebuffer, as the panel sees it
 
 	evSyn, evKey, evAbs = 0, 1, 3
 	absX, absY          = 0x00, 0x01
@@ -63,6 +62,10 @@ type Screen struct {
 	noREAGL   bool // fbink refused REAGL once; use GC16
 }
 
+// PW × PH: the layout, portrait (as the panel sees it): touches are mapped into it. The
+// panel's pixels are ch × cw (gfx.go); on a Paperwhite 2 both are 758 × 1024.
+var PW, PH = 758, 1024
+
 func NewScreen(rot, fullEvery int) *Screen {
 	return &Screen{rot: rot, fullEvery: fullEvery, tmp: "/tmp/desk-frame.png"}
 }
@@ -90,7 +93,7 @@ func (s *Screen) Show(img *image.Gray, w Waveform) {
 		s.remember(img)
 		return
 	}
-	regions := changed(s.shown, img, s.Splits, s.SplitY)
+	regions := changed(s.shown, img, pxLines(s.Splits), pxLines(s.SplitY))
 	if len(regions) == 0 {
 		return
 	}
@@ -151,13 +154,27 @@ func (s *Screen) DeepClean() {
 
 func (s *Screen) ForceFlash() { s.shown = nil }
 
+// pxLines: layout positions (View.Splits) in canvas pixels.
+func pxLines(ls []int) []int {
+	if sc == 1 {
+		return ls
+	}
+	out := make([]int, len(ls))
+	for i, v := range ls {
+		out[i] = px(v, sc)
+	}
+	return out
+}
+
 // changed finds the areas that differ between two pictures: the screen is cut into
-// 32-pixel blocks, and touching (or nearly touching) changed blocks form one area.
+// 32-unit blocks (32 pixels on a Paperwhite 2), and touching (or nearly touching) changed
+// blocks form one area.
 func changed(a, b *image.Gray, splits, splitY []int) []image.Rectangle {
+	bs := px(32, sc)
 	sideOf := func(i int, lines []int) int { // which side of the lines block i (a column or row) is on
 		n := 0
 		for _, p := range lines {
-			if i*32+16 >= p {
+			if i*bs+bs/2 >= p {
 				n++
 			}
 		}
@@ -165,7 +182,6 @@ func changed(a, b *image.Gray, splits, splitY []int) []image.Rectangle {
 	}
 	side := func(col int) int { return sideOf(col, splits) }
 	band := func(row int) int { return sideOf(row, splitY) }
-	const bs = 32
 	gw, gh := (b.Rect.Dx()+bs-1)/bs, (b.Rect.Dy()+bs-1)/bs
 	dirty := make([]bool, gw*gh)
 	any := false
@@ -226,12 +242,12 @@ func changed(a, b *image.Gray, splits, splitY []int) []image.Rectangle {
 	return out
 }
 
-// toPortrait maps a landscape rectangle to the panel's portrait coordinates.
+// toPortrait maps a landscape rectangle of canvas pixels to the panel's portrait pixels.
 func (s *Screen) toPortrait(r image.Rectangle) image.Rectangle {
 	if s.rot == 270 {
-		return image.Rect(r.Min.Y, PH-r.Max.X, r.Max.Y, PH-r.Min.X)
+		return image.Rect(r.Min.Y, cw-r.Max.X, r.Max.Y, cw-r.Min.X)
 	}
-	return image.Rect(PW-r.Max.Y, r.Min.X, PW-r.Min.Y, r.Max.X)
+	return image.Rect(ch-r.Max.Y, r.Min.X, ch-r.Min.Y, r.Max.X)
 }
 
 // toLandscape maps a touch point on the portrait panel to the landscape picture.
@@ -240,6 +256,32 @@ func (s *Screen) toLandscape(px, py int) (int, int) {
 		return PH - 1 - py, px
 	}
 	return py, PW - 1 - px
+}
+
+// panelSize asks FBInk for the panel's size in pixels, portrait (a Paperwhite 2: 758 × 1024);
+// the Paperwhite 2's when it can't tell.
+func panelSize() (int, int) {
+	b, err := exec.Command(fbinkBin, "-e").Output()
+	if err != nil {
+		return PW, PH
+	}
+	var w, h int
+	for _, kv := range strings.FieldsFunc(string(b), func(r rune) bool { return r == ';' || r == ' ' || r == '\n' || r == ',' }) {
+		if v, ok := strings.CutPrefix(kv, "viewWidth="); ok {
+			w, _ = strconv.Atoi(v)
+		}
+		if v, ok := strings.CutPrefix(kv, "viewHeight="); ok {
+			h, _ = strconv.Atoi(v)
+		}
+	}
+	if w > h { // FBInk tells the way the panel is turned now; we want portrait
+		w, h = h, w
+	}
+	if w < 600 || h < 800 {
+		return PW, PH
+	}
+	log.Printf("panel %d × %d", w, h)
+	return w, h
 }
 
 // pushHook, when set (tests), sees each update instead of the panel.
@@ -257,9 +299,9 @@ func (s *Screen) push(img *image.Gray, r image.Rectangle, w Waveform) {
 		for lx := r.Min.X; lx < r.Max.X; lx++ {
 			var px, py int
 			if s.rot == 270 {
-				px, py = ly, PH-1-lx
+				px, py = ly, cw-1-lx
 			} else {
-				px, py = PW-1-ly, lx
+				px, py = ch-1-ly, lx
 			}
 			out.Pix[(py-pr.Min.Y)*out.Stride+(px-pr.Min.X)] = row[lx]
 		}

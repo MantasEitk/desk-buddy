@@ -19,16 +19,18 @@ const stripW = 112 // the frosted strip's width
 func coverFullView(v *View, d *Desk, ui *UI) {
 	img := v.Img
 	m := d.Music
-	full := fullArt(ui)
-	off := (full.Rect.Dy() - LH) / 2 // crop the middle
-	for y := 0; y < LH; y++ {
-		copy(img.Pix[y*img.Stride:y*img.Stride+LW], full.Pix[(y+off)*full.Stride:])
+	W, H := img.Rect.Dx(), img.Rect.Dy() // the canvas, in pixels
+	full := fullArt(ui, W)
+	off := (full.Rect.Dy() - H) / 2 // crop the middle
+	for y := 0; y < H; y++ {
+		copy(img.Pix[y*img.Stride:y*img.Stride+W], full.Pix[(y+off)*full.Stride:])
 	}
-	v.add(Target{R: img.Rect, Act: "coverbare"}) // first, so the buttons on top win
+	v.add(Target{R: image.Rect(0, 0, LW, LH), Act: "coverbare"}) // first, so the buttons on top win
 	cx := float64(LW - stripW/2)
 	if !ui.CoverBare && coverStyle == "frost" {
-		for y := 0; y < LH; y++ {
-			row := img.Pix[y*img.Stride+LW-stripW : y*img.Stride+LW]
+		sw := px(stripW, scaleOf(img))
+		for y := 0; y < H; y++ {
+			row := img.Pix[y*img.Stride+W-sw : y*img.Stride+W]
 			for i, p := range row {
 				row[i] = 255 - uint8(int(255-p)*30/100) // 70 % white over the picture
 			}
@@ -74,10 +76,11 @@ func coverFullView(v *View, d *Desk, ui *UI) {
 	}
 }
 
-// fullArt is the cover enlarged to the screen's width (not yet dithered), made once per song.
-func fullArt(ui *UI) *image.Gray {
-	if ui.ArtFullKey != ui.ArtKey || ui.ArtFull == nil {
-		g := image.NewGray(image.Rect(0, 0, LW, LW))
+// fullArt is the cover enlarged to the screen's width w in pixels (not yet dithered), made once
+// per song.
+func fullArt(ui *UI, w int) *image.Gray {
+	if ui.ArtFullKey != ui.ArtKey || ui.ArtFull == nil || ui.ArtFull.Rect.Dx() != w {
+		g := image.NewGray(image.Rect(0, 0, w, w))
 		xdraw.CatmullRom.Scale(g, g.Rect, ui.Art, ui.Art.Rect, xdraw.Src, nil)
 		ui.ArtFull, ui.ArtFullKey = g, ui.ArtKey
 	}

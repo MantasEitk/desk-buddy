@@ -139,12 +139,14 @@ func refreshGlyph(img *image.Gray, cx, cy float64, c uint8) {
 		return
 	}
 	// on the dark (selected) row: draw it on a scratch canvas and copy it over, lightened
-	tmp := newCanvas(30, 30)
+	tmp := newScratch(30, 30)
+	defer dropScratch(tmp)
 	refreshIcon(tmp, 15, 15, 10)
-	for y := 0; y < 30; y++ {
-		for x := 0; x < 30; x++ {
+	n, x0, y0 := tmp.Rect.Dx(), px(int(cx)-15, scaleOf(img)), px(int(cy)-15, scaleOf(img))
+	for y := 0; y < n; y++ {
+		for x := 0; x < n; x++ {
 			if p := tmp.Pix[y*tmp.Stride+x]; p < 255 {
-				blend(img, int(cx)-15+x, int(cy)-15+y, c, float64(255-p)/255)
+				blendPx(img, x0+x, y0+y, c, float64(255-p)/255)
 			}
 		}
 	}

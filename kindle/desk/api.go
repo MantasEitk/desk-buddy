@@ -202,7 +202,8 @@ func (c *Client) DeckIcons(machine string) (map[string]*image.Gray, error) {
 		if err != nil {
 			continue
 		}
-		dst := image.NewGray(image.Rect(0, 0, iconSize, iconSize))
+		n := px(iconSize, sc) // at the panel's resolution, so the Deck's icons are sharp
+		dst := image.NewGray(image.Rect(0, 0, n, n))
 		xdraw.CatmullRom.Scale(dst, dst.Rect, src, src.Bounds(), xdraw.Src, nil)
 		trimIcon(dst)
 		out[label] = dst

@@ -386,7 +386,7 @@ var _ = strings.Cut
 
 // fade greys out an area (a setting that's switched off): black becomes mid grey, white stays.
 func fade(img *image.Gray, r image.Rectangle) {
-	r = r.Intersect(img.Rect)
+	r = pxRect(img, r).Intersect(img.Rect)
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		row := img.Pix[img.PixOffset(r.Min.X, y):img.PixOffset(r.Max.X, y)]
 		for i, p := range row {

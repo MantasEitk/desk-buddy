@@ -9,8 +9,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	xdraw "golang.org/x/image/draw"
 )
 
 type Music struct {
@@ -317,7 +315,7 @@ func musicWidget(v *View, d *Desk, ui *UI, x0, x1, y int) {
 	size := min(x1-x0, bottom-top)
 	r := image.Rect(x0+(x1-x0-size)/2, top, x0+(x1-x0-size)/2+size, top+size)
 	if art := ui.Art; art != nil && m.ArtKey != "" && m.ArtKey == ui.ArtKey {
-		xdraw.ApproxBiLinear.Scale(img, r, art, art.Rect, xdraw.Src, nil)
+		drawImage(img, r, art)
 		if ui.Dark { // the whole screen gets inverted for dark mode: pre-invert so the cover comes out right
 			invertRect(img, r)
 		}

@@ -1,5 +1,13 @@
 [
   {
+    "n": 2,
+    "date": "2026-10-13",
+    "items": [
+      "Added: Desk Buddy fits bigger Kindle screens (Paperwhite 3, 4 and 5, Signature Edition, Voyage, Oasis): everything is drawn at the screen's own resolution, so it fills the screen and stays sharp",
+      "Fixed: on the tour, the page dots no longer run into \"Welcome to Desk Buddy\""
+    ]
+  },
+  {
     "n": 1,
     "date": "2026-10-08",
     "items": [

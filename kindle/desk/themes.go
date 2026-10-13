@@ -328,11 +328,35 @@ func tickMark(img *image.Gray, cx, cy, r float64, done bool) {
 	}
 }
 
-// onPaper: set a pixel to c only where it's still blank (patterns go behind what's drawn).
+// onPaper: set the layout point (x, y) to c only where it's still blank (patterns go behind
+// what's drawn); on a larger canvas, each pixel it covers.
 func onPaper(img *image.Gray, x, y int, c uint8) {
-	if x >= 0 && y >= 0 && x < LW && y < LH && img.Pix[y*img.Stride+x] == paper {
+	s := scaleOf(img)
+	if s == 1 {
+		onPaperPx(img, x, y, c)
+		return
+	}
+	for py := px(y, s); py < px(y+1, s); py++ {
+		for pxx := px(x, s); pxx < px(x+1, s); pxx++ {
+			onPaperPx(img, pxx, py, c)
+		}
+	}
+}
+
+// onPaperPx: onPaper for one pixel.
+func onPaperPx(img *image.Gray, x, y int, c uint8) {
+	if x >= 0 && y >= 0 && x < img.Rect.Dx() && y < img.Rect.Dy() && img.Pix[y*img.Stride+x] == paper {
 		img.Pix[y*img.Stride+x] = c
 	}
+}
+
+// pixAt: the grey at the layout point (x, y) (the middle of the pixels it covers).
+func pixAt(img *image.Gray, x, y int) uint8 {
+	s := scaleOf(img)
+	if s != 1 {
+		x, y = int((float64(x)+0.5)*s), int((float64(y)+0.5)*s)
+	}
+	return img.Pix[y*img.Stride+x]
 }
 
 // columnLine: is there a full-height black line at x (the column divider)?
@@ -340,7 +364,7 @@ func columnLine(img *image.Gray, x int) bool {
 	for _, y := range []int{barH + 40, LH / 2, LH - 30} {
 		dark := false
 		for dx := -1; dx <= 1; dx++ {
-			if img.Pix[y*img.Stride+x+dx] < 100 {
+			if pixAt(img, x+dx, y) < 100 {
 				dark = true
 			}
 		}
@@ -365,7 +389,7 @@ func decorate(v *View) {
 	case "garden":
 		gardenTasks(v, divX)          // the top bar's vine always; the column's only when there is one
 		for _, t := range v.Targets { // a little sprout on the chosen tab
-			if t.Act == "tab" && t.Show.Dy() > 30 && img.Pix[(t.Show.Min.Y+4)*img.Stride+t.Show.Min.X+10] == ink {
+			if t.Act == "tab" && t.Show.Dy() > 30 && pixAt(img, t.Show.Min.X+10, t.Show.Min.Y+4) == ink {
 				x, y := float64(t.Show.Max.X-6), float64(t.Show.Min.Y+3)
 				leaf(img, x, y, -0.9, 13, 7)
 				leaf(img, x, y, -2.2, 10, 6)
@@ -376,7 +400,7 @@ func decorate(v *View) {
 		for x := 0; x < LW; x++ {
 			clear[x] = true
 			for y := 4; y < barH-2 && clear[x]; y++ {
-				clear[x] = img.Pix[y*img.Stride+x] == paper
+				clear[x] = pixAt(img, x, y) == paper
 			}
 		}
 		for x := 0; x < LW; {
@@ -410,7 +434,7 @@ func decorate(v *View) {
 	case "sketch": // a hand-drawn line along the top bar and the column
 		wobble(img, 6, float64(barH)+4, LW-6, float64(barH)+3, 1.4, ink, 5)
 		if divX > 0 {
-			wobble(img, float64(divX)+4, float64(barH)+8, float64(divX)+5, LH-6, 1.4, ink, 6)
+			wobble(img, float64(divX)+4, float64(barH)+8, float64(divX)+5, float64(LH-6), 1.4, ink, 6)
 		}
 	case "typewriter": // a typed rule under the top bar: – – – –
 		fillRect(img, image.Rect(0, barH, LW, barH+2), paper)
@@ -514,10 +538,11 @@ func gameboyClock(img *image.Gray) {
 // classicClock: the clock in a 1984 window on a dotted desktop.
 func classicClock(img *image.Gray) {
 	win := image.Rect(110, 70, LW-110, LH-80)
-	for y := 0; y < LH; y++ { // the desktop: a fine dotted grey (only outside the window)
-		for x := 0; x < LW; x++ {
-			if !image.Pt(x, y).In(win.Inset(-3)) && (x+y)%2 == 0 {
-				onPaper(img, x, y, ink)
+	around := pxRect(img, win.Inset(-3))
+	for y := 0; y < img.Rect.Dy(); y++ { // the desktop: a fine dotted grey (only outside the window), per pixel
+		for x := 0; x < img.Rect.Dx(); x++ {
+			if !image.Pt(x, y).In(around) && (x+y)%2 == 0 {
+				onPaperPx(img, x, y, ink)
 			}
 		}
 	}
@@ -544,10 +569,11 @@ func classicClock(img *image.Gray) {
 // retroClock: the clock in a 90s window on a grey desktop, with a taskbar.
 func retroClock(img *image.Gray) {
 	win := image.Rect(100, 60, LW-100, LH-100)
-	for y := 0; y < LH; y++ {
-		for x := 0; x < LW; x++ {
-			if !image.Pt(x, y).In(win) {
-				onPaper(img, x, y, grey3)
+	inside := pxRect(img, win)
+	for y := 0; y < img.Rect.Dy(); y++ {
+		for x := 0; x < img.Rect.Dx(); x++ {
+			if !image.Pt(x, y).In(inside) {
+				onPaperPx(img, x, y, grey3)
 			}
 		}
 	}
@@ -624,7 +650,7 @@ func notebookClock(img *image.Gray) {
 		outline(img, p, 1, grey3)
 	}
 	tape(LW-90, 40, 0.6)
-	tape(150, LH-40, 0.5)
+	tape(150, float64(LH-40), 0.5)
 }
 
 // sketchClock: a hand-drawn frame with doodles in the corners.
@@ -645,7 +671,7 @@ func sketchClock(img *image.Gray) {
 		}
 	}
 	star(90, 95, 24, 30)
-	star(LW-95, LH-120, 18, 40)
+	star(LW-95, float64(LH-120), 18, 40)
 	sketchCircle(img, LW-100, 100, 26, ink, 50) // a little sun with rays
 	for i := 0; i < 8; i++ {
 		a := float64(i) * math.Pi / 4
@@ -653,8 +679,8 @@ func sketchClock(img *image.Gray) {
 	}
 	for i := 0; i < 3; i++ { // a squiggle
 		x := 70.0 + float64(i)*28
-		wobble(img, x, LH-110, x+14, LH-130, 1.8, ink, int64(70+i))
-		wobble(img, x+14, LH-130, x+28, LH-110, 1.8, ink, int64(80+i))
+		wobble(img, x, float64(LH-110), x+14, float64(LH-130), 1.8, ink, int64(70+i))
+		wobble(img, x+14, float64(LH-130), x+28, float64(LH-110), 1.8, ink, int64(80+i))
 	}
 }
 

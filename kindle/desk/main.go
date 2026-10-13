@@ -207,6 +207,7 @@ func main() {
 	menu := flag.Bool("menu", false, "with -preview: open the Work / Home / Auto menu")
 	previewBattery = flag.Int("battery", -1, "with -preview: show this battery level")
 	tabs := flag.String("tabs", "", "with -preview: tab style (segmented, icons, underline)")
+	panelFlag := flag.String("panel", "", "with -preview: draw for another Kindle's screen, landscape pixels (1448x1072, 1648x1236)")
 	flag.Parse()
 	log.SetFlags(log.Ltime)
 
@@ -216,6 +217,17 @@ func main() {
 	}
 	if err := loadFonts(); err != nil {
 		log.Fatal("fonts: ", err)
+	}
+	// the screen's real size, before anything is drawn (fonts are made for it)
+	if *panelFlag != "" {
+		var w, h int
+		fmt.Sscanf(*panelFlag, "%dx%d", &w, &h)
+		setPanel(w, h)
+	} else if *preview == "" {
+		// anything within a few pixels of the Paperwhite 2's 758 × 1024 is one: left exactly as it is
+		if w, h := panelSize(); abs(w-PW) > 16 || abs(h-PH) > 16 {
+			setPanel(h, w) // portrait → landscape
+		}
 	}
 	client := NewClient(cfg.Server, cfg.Key)
 	if *tabs != "" {

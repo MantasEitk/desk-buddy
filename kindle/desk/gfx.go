@@ -1,15 +1,23 @@
 package main
 
 // Drawing on an 8-bit grey canvas: rectangles, anti-aliased round shapes, and text.
+//
+// Every screen is laid out in Paperwhite 2 units: LW (1024) wide and LH tall (758 on most
+// Kindles, a little more on the wider ones). The canvas holds that at the panel's own
+// resolution, sc times larger (1 on a Paperwhite 2, about 1.41 on a Paperwhite 3 / 4, 1.61 on
+// a Paperwhite 5), and the functions below scale as they draw, so text and shapes stay sharp.
+// Small scratch images (icons being prepared) are drawn 1:1.
 
 import (
 	"embed"
 	"image"
 	"image/color"
+	"image/draw"
 	"math"
 	"strconv"
 	"strings"
 
+	xdraw "golang.org/x/image/draw"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
@@ -31,6 +39,84 @@ var (
 	fonts = map[string]*opentype.Font{}
 	faces = map[string]font.Face{}
 )
+
+var (
+	LH     = 758     // the layout's height in Paperwhite 2 units (setPanel)
+	sc     = 1.0     // canvas pixels per layout unit
+	cw, ch = LW, 758 // the canvas (the panel, landscape) in pixels
+)
+
+// setPanel fits the layout to a panel of long × short pixels (landscape): the width stays LW
+// units, the height follows the panel's shape. A Paperwhite 2 (1024 × 758) changes nothing.
+func setPanel(long, short int) {
+	if long < 800 || short < 600 {
+		return
+	}
+	sc = float64(long) / LW
+	LH = int(math.Round(LW * float64(short) / float64(long)))
+	cw, ch = long, short
+	PW, PH = LH, LW // touches are mapped to the layout (portrait)
+	kbTop = LH - 318
+}
+
+// scaleOf: how many pixels per layout unit img has (the canvas, and scratch images made with
+// newScratch: sc; any other image: 1).
+func scaleOf(img *image.Gray) float64 {
+	if sc != 1 && (img.Rect.Dx() == cw && img.Rect.Dy() == ch || scratch[img]) {
+		return sc
+	}
+	return 1
+}
+
+// scratch: small images being drawn at the canvas's resolution (newScratch, then dropScratch).
+var scratch = map[*image.Gray]bool{}
+
+// newScratch is a white w × h (layout units) image at the canvas's resolution, drawn on like
+// the canvas; dropScratch when done with it.
+func newScratch(w, h int) *image.Gray {
+	img := newCanvas(px(w, sc), px(h, sc))
+	if sc != 1 {
+		scratch[img] = true
+	}
+	return img
+}
+
+func dropScratch(img *image.Gray) { delete(scratch, img) }
+
+// px turns a layout coordinate into a pixel one at scale s.
+func px(v int, s float64) int {
+	if s == 1 {
+		return v
+	}
+	return int(math.Round(float64(v) * s))
+}
+
+// pxRect turns a layout rectangle into pixels on img (edges round the same way everywhere, so
+// neighbouring areas still meet exactly).
+func pxRect(img *image.Gray, r image.Rectangle) image.Rectangle {
+	s := scaleOf(img)
+	if s == 1 {
+		return r
+	}
+	return image.Rect(px(r.Min.X, s), px(r.Min.Y, s), px(r.Max.X, s), px(r.Max.Y, s))
+}
+
+// drawImage draws src filling the layout rectangle r, at the canvas's resolution: copied as it
+// is when the sizes match, else scaled (smoothly).
+func drawImage(img *image.Gray, r image.Rectangle, src image.Image) {
+	r = pxRect(img, r)
+	if r.Size() == src.Bounds().Size() {
+		draw.Draw(img, r, src, src.Bounds().Min, draw.Src)
+		return
+	}
+	xdraw.ApproxBiLinear.Scale(img, r, src, src.Bounds(), xdraw.Src, nil)
+}
+
+// sface is a font at its layout size, carrying the same font at the canvas's size for drawing.
+type sface struct {
+	font.Face           // at the layout size (measures for the layout)
+	big       font.Face // at sc × the size (draws on the canvas)
+}
 
 func loadFonts() error {
 	for name, file := range map[string]string{
@@ -84,15 +170,26 @@ func face(name string, size float64) font.Face {
 	if f, ok := faces[key]; ok {
 		return f
 	}
-	f, err := opentype.NewFace(fonts[name], &opentype.FaceOptions{Size: size, DPI: 72, Hinting: font.HintingFull})
-	if err != nil {
-		panic(err)
+	mk := func(size float64) font.Face {
+		f, err := opentype.NewFace(fonts[name], &opentype.FaceOptions{Size: size, DPI: 72, Hinting: font.HintingFull})
+		if err != nil {
+			panic(err)
+		}
+		return f
+	}
+	var f font.Face = mk(size)
+	if sc != 1 {
+		f = &sface{f, mk(size * sc)}
 	}
 	faces[key] = f
 	return f
 }
 
+// newCanvas makes a white image; a screen-sized one (LW × LH) is made at the panel's resolution.
 func newCanvas(w, h int) *image.Gray {
+	if w == LW && h == LH {
+		w, h = cw, ch
+	}
 	img := image.NewGray(image.Rect(0, 0, w, h))
 	for i := range img.Pix {
 		img.Pix[i] = paper
@@ -101,7 +198,7 @@ func newCanvas(w, h int) *image.Gray {
 }
 
 func fillRect(img *image.Gray, r image.Rectangle, c uint8) {
-	r = r.Intersect(img.Rect)
+	r = pxRect(img, r).Intersect(img.Rect)
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		row := img.Pix[img.PixOffset(r.Min.X, y):img.PixOffset(r.Max.X, y)]
 		for i := range row {
@@ -111,7 +208,7 @@ func fillRect(img *image.Gray, r image.Rectangle, c uint8) {
 }
 
 func invertRect(img *image.Gray, r image.Rectangle) {
-	r = r.Intersect(img.Rect)
+	r = pxRect(img, r).Intersect(img.Rect)
 	for y := r.Min.Y; y < r.Max.Y; y++ {
 		row := img.Pix[img.PixOffset(r.Min.X, y):img.PixOffset(r.Max.X, y)]
 		for i := range row {
@@ -120,7 +217,23 @@ func invertRect(img *image.Gray, r image.Rectangle) {
 	}
 }
 
+// blend mixes c into the layout point (x, y) with opacity a: on a larger canvas, the whole
+// block of pixels it covers (for code that draws dot by dot).
 func blend(img *image.Gray, x, y int, c uint8, a float64) {
+	s := scaleOf(img)
+	if s == 1 {
+		blendPx(img, x, y, c, a)
+		return
+	}
+	for py := px(y, s); py < px(y+1, s); py++ {
+		for pxx := px(x, s); pxx < px(x+1, s); pxx++ {
+			blendPx(img, pxx, py, c, a)
+		}
+	}
+}
+
+// blendPx mixes c into the pixel (x, y) with opacity a.
+func blendPx(img *image.Gray, x, y int, c uint8, a float64) {
 	if a <= 0 || !image.Pt(x, y).In(img.Rect) {
 		return
 	}
@@ -144,49 +257,59 @@ func roundRectDist(r image.Rectangle, rad, px, py float64) float64 {
 
 // fillRoundRect fills r with rounded corners, only touching pixels inside clip.
 func rawFillRoundRect(img *image.Gray, r image.Rectangle, rad float64, c uint8, clip ...image.Rectangle) {
+	rad *= scaleOf(img)
+	r = pxRect(img, r)
 	area := r.Inset(-1)
 	if len(clip) > 0 {
-		area = area.Intersect(clip[0])
+		area = area.Intersect(pxRect(img, clip[0]))
 	}
 	for y := area.Min.Y; y < area.Max.Y; y++ {
 		for x := area.Min.X; x < area.Max.X; x++ {
-			blend(img, x, y, c, clamp01(0.5-roundRectDist(r, rad, float64(x)+0.5, float64(y)+0.5)))
+			blendPx(img, x, y, c, clamp01(0.5-roundRectDist(r, rad, float64(x)+0.5, float64(y)+0.5)))
 		}
 	}
 }
 
 // strokeRoundRect draws a border of thickness t just inside r.
 func rawStrokeRoundRect(img *image.Gray, r image.Rectangle, rad, t float64, c uint8) {
+	s := scaleOf(img)
+	rad, t, r = rad*s, t*s, pxRect(img, r)
 	area := r.Inset(-1)
 	for y := area.Min.Y; y < area.Max.Y; y++ {
 		for x := area.Min.X; x < area.Max.X; x++ {
 			d := roundRectDist(r, rad, float64(x)+0.5, float64(y)+0.5)
-			blend(img, x, y, c, clamp01(0.5-(math.Abs(d+t/2)-t/2)))
+			blendPx(img, x, y, c, clamp01(0.5-(math.Abs(d+t/2)-t/2)))
 		}
 	}
 }
 
 func fillCircle(img *image.Gray, cx, cy, rad float64, c uint8) {
+	s := scaleOf(img)
+	cx, cy, rad = cx*s, cy*s, rad*s
 	r := image.Rect(int(cx-rad), int(cy-rad), int(math.Ceil(cx+rad)), int(math.Ceil(cy+rad)))
 	for y := r.Min.Y - 1; y <= r.Max.Y; y++ {
 		for x := r.Min.X - 1; x <= r.Max.X; x++ {
-			blend(img, x, y, c, clamp01(0.5-(math.Hypot(float64(x)+0.5-cx, float64(y)+0.5-cy)-rad)))
+			blendPx(img, x, y, c, clamp01(0.5-(math.Hypot(float64(x)+0.5-cx, float64(y)+0.5-cy)-rad)))
 		}
 	}
 }
 
 func ringCircle(img *image.Gray, cx, cy, rad, t float64, c uint8) {
+	s := scaleOf(img)
+	cx, cy, rad, t = cx*s, cy*s, rad*s, t*s
 	r := image.Rect(int(cx-rad), int(cy-rad), int(math.Ceil(cx+rad)), int(math.Ceil(cy+rad)))
 	for y := r.Min.Y - 1; y <= r.Max.Y; y++ {
 		for x := r.Min.X - 1; x <= r.Max.X; x++ {
 			d := math.Hypot(float64(x)+0.5-cx, float64(y)+0.5-cy) - rad
-			blend(img, x, y, c, clamp01(0.5-(math.Abs(d+t/2)-t/2)))
+			blendPx(img, x, y, c, clamp01(0.5-(math.Abs(d+t/2)-t/2)))
 		}
 	}
 }
 
 // line draws a round-capped segment of width w.
 func line(img *image.Gray, ax, ay, bx, by, w float64, c uint8) {
+	s := scaleOf(img)
+	ax, ay, bx, by, w = ax*s, ay*s, bx*s, by*s, w*s
 	minX, maxX := int(math.Min(ax, bx)-w), int(math.Max(ax, bx)+w)+1
 	minY, maxY := int(math.Min(ay, by)-w), int(math.Max(ay, by)+w)+1
 	dx, dy := bx-ax, by-ay
@@ -199,14 +322,21 @@ func line(img *image.Gray, ax, ay, bx, by, w float64, c uint8) {
 				t = clamp01(((px-ax)*dx + (py-ay)*dy) / l2)
 			}
 			d := math.Hypot(px-(ax+t*dx), py-(ay+t*dy)) - w/2
-			blend(img, x, y, c, clamp01(0.5-d))
+			blendPx(img, x, y, c, clamp01(0.5-d))
 		}
 	}
 }
 
 // ---------- text ----------
 
-func textW(f font.Face, s string) int { return font.MeasureString(f, s).Ceil() }
+// textW: the width of s in layout units (measured at the size it's drawn, so drawing and
+// layout agree on every screen).
+func textW(f font.Face, s string) int {
+	if sf, ok := f.(*sface); ok {
+		return int(math.Ceil(float64(font.MeasureString(sf.big, s)) / 64 / sc))
+	}
+	return font.MeasureString(f, s).Ceil()
+}
 
 func capHeight(f font.Face) int {
 	m := f.Metrics()
@@ -218,6 +348,15 @@ func capHeight(f font.Face) int {
 
 // drawText draws s with its baseline at y and returns the x after the last glyph.
 func drawText(img *image.Gray, f font.Face, x, y int, s string, c uint8) int {
+	if sf, ok := f.(*sface); ok {
+		if k := scaleOf(img); k != 1 { // the canvas: the big font, at the point in pixels
+			d := font.Drawer{Dst: img, Src: image.NewUniform(color.Gray{c}), Face: sf.big,
+				Dot: fixed.Point26_6{X: fixed.Int26_6(math.Round(float64(x) * k * 64)), Y: fixed.Int26_6(math.Round(float64(y) * k * 64))}}
+			d.DrawString(s)
+			return int(math.Ceil(float64(d.Dot.X) / 64 / k))
+		}
+		f = sf.Face
+	}
 	d := font.Drawer{Dst: img, Src: image.NewUniform(color.Gray{c}), Face: f, Dot: fixed.P(x, y)}
 	d.DrawString(s)
 	return d.Dot.X.Ceil()
@@ -235,7 +374,13 @@ func drawCentered(img *image.Gray, f font.Face, cx, y int, s string, c uint8) {
 
 // drawSpaced draws letter-spaced text (the small uppercase labels).
 func drawSpaced(img *image.Gray, f font.Face, x, y int, s string, spacing int, c uint8) int {
+	sf, big := f.(*sface)
 	for _, r := range s {
+		if big && sc != 1 { // step by the same widths spacedW adds up
+			drawText(img, f, x, y, string(r), c)
+			x += int(math.Ceil(float64(font.MeasureString(sf.big, string(r)))/64/sc)) + spacing
+			continue
+		}
 		x = drawText(img, f, x, y, string(r), c) + spacing
 	}
 	return x - spacing
@@ -245,6 +390,13 @@ func spacedW(f font.Face, s string, spacing int) int {
 	n := len([]rune(s))
 	if n == 0 {
 		return 0
+	}
+	if sf, ok := f.(*sface); ok && sc != 1 { // drawSpaced places letter by letter: add them up the same way
+		x := 0
+		for _, r := range s {
+			x += int(math.Ceil(float64(font.MeasureString(sf.big, string(r))) / 64 / sc))
+		}
+		return x + spacing*(n-1)
 	}
 	return textW(f, s) + spacing*(n-1)
 }
@@ -293,6 +445,8 @@ func wrap(f font.Face, s string, maxW, maxLines int) []string {
 
 // fillTriangle fills a triangle, smoothing its edges.
 func fillTriangle(img *image.Gray, ax, ay, bx, by, cx, cy float64, c uint8) {
+	s := scaleOf(img)
+	ax, ay, bx, by, cx, cy = ax*s, ay*s, bx*s, by*s, cx*s, cy*s
 	edge := func(px, py, x0, y0, x1, y1 float64) float64 { // signed distance to the edge line
 		return ((x1-x0)*(py-y0) - (y1-y0)*(px-x0)) / math.Hypot(x1-x0, y1-y0)
 	}
@@ -303,13 +457,20 @@ func fillTriangle(img *image.Gray, ax, ay, bx, by, cx, cy float64, c uint8) {
 		for x := int(math.Min(ax, math.Min(bx, cx))) - 1; x <= int(math.Max(ax, math.Max(bx, cx)))+1; x++ {
 			px, py := float64(x)+0.5, float64(y)+0.5
 			d := math.Min(edge(px, py, ax, ay, bx, by), math.Min(edge(px, py, bx, by, cx, cy), edge(px, py, cx, cy, ax, ay)))
-			blend(img, x, y, c, clamp01(d+0.5))
+			blendPx(img, x, y, c, clamp01(d+0.5))
 		}
 	}
 }
 
 // fillPolygon fills a simple polygon, smoothing its edges (4 samples per pixel).
 func fillPolygon(img *image.Gray, pts [][2]float64, c uint8) {
+	if s := scaleOf(img); s != 1 {
+		big := make([][2]float64, len(pts))
+		for i, p := range pts {
+			big[i] = [2]float64{p[0] * s, p[1] * s}
+		}
+		pts = big
+	}
 	minX, minY, maxX, maxY := math.Inf(1), math.Inf(1), math.Inf(-1), math.Inf(-1)
 	for _, p := range pts {
 		minX, maxX = math.Min(minX, p[0]), math.Max(maxX, p[0])
@@ -333,7 +494,7 @@ func fillPolygon(img *image.Gray, pts [][2]float64, c uint8) {
 					n++
 				}
 			}
-			blend(img, x, y, c, float64(n)/4)
+			blendPx(img, x, y, c, float64(n)/4)
 		}
 	}
 }
