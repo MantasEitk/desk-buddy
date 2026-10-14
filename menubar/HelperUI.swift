@@ -677,11 +677,13 @@ struct HelperWindow: View {
 
     static let alert = Color(red: 0.88, green: 0.27, blue: 0.22)
 
-    // how many things need the user in a section: permissions not allowed, a Kindle update waiting
+    // how many things need the user in a section: permissions not allowed, a Kindle update
+    // waiting, a new Desk Buddy for Mac
     func badge(_ id: String) -> Int {
         switch id {
         case "permissions": return model.perms.filter { !$0.ok && !$0.status.hasPrefix("Couldn't") && !$0.status.hasPrefix("Checking") && !$0.status.hasPrefix("Open ") }.count
         case "kindle": return model.kindleUpdate ? 1 : 0
+        case "about": return model.updVersion.isEmpty ? 0 : 1
         default: return 0
         }
     }
@@ -705,7 +707,7 @@ struct HelperWindow: View {
         let ready = !model.updVersion.isEmpty
         let status = model.updBusy || (!model.updStatus.isEmpty && !ready) ? model.updStatus
             : ready ? (model.updCanInstall ? "Version \(model.updVersion) is ready. It installs when you click Install, then Desk Buddy restarts." + (model.updStatus.isEmpty ? "" : " " + model.updStatus)
-                                           : "Version \(model.updVersion) is out. It can be installed from here once Desk Buddy is on GitHub.")
+                                           : "Version \(model.updVersion) is out. Download it from github.com/deskbuddy-app/desk-buddy.")
             : !model.updChecked.isEmpty ? "You're up to date (checked at \(model.updChecked))."
             : "Checked every 6 hours from your Desk Buddy server. It installs only when you click."
         SpacedLabel(text: "Updates").padding(.top, 8)

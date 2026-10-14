@@ -4,9 +4,12 @@ package main
 // your own cloud) offers the newest Windows app at /windows/release.json (windows/release.sh puts
 // it there). When it's newer, the window shows "Update Desk Buddy"; clicking it downloads the
 // new Desk Buddy.exe, checks it, swaps it in (Windows lets a running program be renamed) and
-// starts it. Once the repo is public this can also come from GitHub Releases.
+// starts it. It also asks GitHub for the newest public release (desk-buddy-latest.json, a file in
+// every release since 1.2) and takes whichever is newer; a GitHub update is the whole zip, so the
+// server and the Kindle's files are updated too.
 
 import (
+	"archive/zip"
 	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
@@ -27,7 +30,8 @@ type release struct {
 	Version    string      `json:"version"`
 	SHA256     string      `json:"sha256"`
 	Size       int64       `json:"size"`
-	File       string      `json:"file"`
+	File       string      `json:"file"`       // a path on the Desk Buddy server (Desk Buddy.exe only)
+	URL        string      `json:"url"`        // or a GitHub download (the whole zip)
 	Notes      []string    `json:"notes"`      // the newest version's items (what 0.4 shows)
 	PatchNotes []noteEntry `json:"patchnotes"` // the newest few versions (release.sh, from patchnotes.json)
 }
@@ -75,19 +79,59 @@ func newer(a, b string) bool {
 	return false
 }
 
-func checkUpdate() error {
-	if !connected() {
-		return fmt.Errorf("not connected")
+// latestURL: a small file in every GitHub release since 1.2 saying what's in it
+// ({"windows": release, "mac": …}); /releases/latest/ always points at the newest full release.
+var latestURL = "https://github.com/deskbuddy-app/desk-buddy/releases/latest/download/desk-buddy-latest.json"
+
+func fromGitHub() (*release, error) {
+	req, _ := http.NewRequest("GET", latestURL, nil)
+	req.Header.Set("User-Agent", userAgent)
+	resp, err := quick.Do(req)
+	if err != nil {
+		return nil, err
 	}
-	var r release
-	if err := call(quick, "GET", "/windows/release.json", nil, &r); err != nil {
-		return err
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("github: %s", resp.Status)
+	}
+	var m struct {
+		Windows release `json:"windows"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&m); err != nil {
+		return nil, err
+	}
+	if !strings.HasPrefix(m.Windows.URL, "https://github.com/deskbuddy-app/") {
+		return nil, fmt.Errorf("github: no windows download")
+	}
+	return &m.Windows, nil
+}
+
+// checkUpdate asks GitHub and the Desk Buddy server this PC is connected to, and keeps the newest.
+func checkUpdate() error {
+	var best *release
+	answered := false
+	if r, err := fromGitHub(); err == nil {
+		answered = true
+		best = r
+	}
+	if connected() {
+		var r release
+		if call(quick, "GET", "/windows/release.json", nil, &r) == nil {
+			answered = true
+			if r.File != "" && (best == nil || newer(r.Version, best.Version)) {
+				r.URL = ""
+				best = &r
+			}
+		}
+	}
+	if !answered {
+		return fmt.Errorf("couldn't reach GitHub or the server")
 	}
 	updMu.Lock()
 	defer updMu.Unlock()
 	updChecked = time.Now()
-	if r.Version != "" && r.SHA256 != "" && newer(r.Version, version) {
-		updReady = &r
+	if best != nil && best.Version != "" && best.SHA256 != "" && newer(best.Version, version) {
+		updReady = best
 	} else {
 		updReady = nil
 	}
@@ -122,7 +166,7 @@ func setUpdNote(s string, busy bool) {
 	updMu.Unlock()
 }
 
-// applyUpdate downloads, checks and swaps in the new Desk Buddy.exe, then restarts.
+// applyUpdate downloads and checks the new version, swaps it in, then restarts.
 func applyUpdate() {
 	r, _, busy := updateState()
 	if r == nil || busy {
@@ -130,9 +174,14 @@ func applyUpdate() {
 	}
 	setUpdNote("Downloading…", true)
 	fail := func(msg string) { setUpdNote(msg, false); report("update: " + msg) }
-	c := current()
-	req, _ := http.NewRequest("GET", strings.TrimRight(c.Server, "/")+r.File, nil)
-	req.Header.Set("X-Key", c.Key)
+	var req *http.Request
+	if r.URL != "" {
+		req, _ = http.NewRequest("GET", r.URL, nil) // GitHub: no key
+	} else {
+		c := current()
+		req, _ = http.NewRequest("GET", strings.TrimRight(c.Server, "/")+r.File, nil)
+		req.Header.Set("X-Key", c.Key)
+	}
 	req.Header.Set("User-Agent", userAgent)
 	resp, err := (&http.Client{Timeout: 10 * time.Minute}).Do(req)
 	if err != nil || resp.StatusCode != 200 {
@@ -141,8 +190,9 @@ func applyUpdate() {
 	}
 	defer resp.Body.Close()
 	dir := filepath.Join(configDir(), "update")
+	os.RemoveAll(dir)
 	os.MkdirAll(dir, 0o700)
-	tmp := filepath.Join(dir, "Desk Buddy.exe.part")
+	tmp := filepath.Join(dir, "download.part")
 	f, err := os.Create(tmp)
 	if err != nil {
 		fail("Couldn't save it: " + err.Error())
@@ -158,18 +208,16 @@ func applyUpdate() {
 	}
 	setUpdNote("Installing…", true)
 	exe, _ := os.Executable()
-	old := strings.TrimSuffix(exe, ".exe") + ".old.exe"
-	os.Remove(old)
-	if err := os.Rename(exe, old); err != nil { // a running program can be renamed, not overwritten
+	if r.URL != "" {
+		err = swapFolder(tmp, filepath.Join(dir, "new"), filepath.Dir(exe))
+	} else {
+		err = swapFiles(map[string]string{exe: tmp})
+	}
+	if err != nil {
 		fail("Couldn't replace Desk Buddy: " + err.Error())
 		return
 	}
-	if err := copyFile(tmp, exe); err != nil {
-		os.Rename(old, exe) // put it back
-		fail("Couldn't replace Desk Buddy: " + err.Error())
-		return
-	}
-	os.Remove(tmp)
+	os.RemoveAll(dir)
 	setUpdNote("Restarting…", true)
 	if err := exec.Command(exe, "--after-update").Start(); err != nil {
 		fail("Updated, but couldn't restart: open Desk Buddy again")
@@ -177,6 +225,82 @@ func applyUpdate() {
 	}
 	quitApp()
 }
+
+// swapFolder unpacks the release zip (one folder, "Desk Buddy for Windows") into staging, then
+// puts each of its files in place of the ones next to Desk Buddy.exe.
+func swapFolder(zipPath, staging, into string) error {
+	z, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return err
+	}
+	defer z.Close()
+	files := map[string]string{} // where it goes → where it was unpacked
+	for _, f := range z.File {
+		_, rel, ok := strings.Cut(f.Name, "/") // drop the top folder
+		if !ok || rel == "" || strings.HasSuffix(f.Name, "/") {
+			continue
+		}
+		rel = filepath.FromSlash(rel)
+		if !filepath.IsLocal(rel) {
+			return fmt.Errorf("unexpected file in the download: %s", f.Name)
+		}
+		src := filepath.Join(staging, rel)
+		os.MkdirAll(filepath.Dir(src), 0o700)
+		in, err := f.Open()
+		if err != nil {
+			return err
+		}
+		out, err := os.Create(src)
+		if err == nil {
+			_, err = io.Copy(out, in)
+			if cerr := out.Close(); err == nil {
+				err = cerr
+			}
+		}
+		in.Close()
+		if err != nil {
+			return err
+		}
+		files[filepath.Join(into, rel)] = src
+	}
+	if _, ok := files[filepath.Join(into, "Desk Buddy.exe")]; !ok {
+		return fmt.Errorf("the download didn't have Desk Buddy in it")
+	}
+	return swapFiles(files)
+}
+
+// swapFiles puts each new file in place. Programs (.exe) may be running: Windows lets them be
+// renamed, not overwritten, so the old one becomes .old.exe (cleanAfterUpdate removes it).
+// If anything fails, the programs already moved aside are put back.
+func swapFiles(files map[string]string) error {
+	var moved []string
+	undo := func() {
+		for _, to := range moved {
+			os.Remove(to)
+			os.Rename(oldName(to), to)
+		}
+	}
+	for to, from := range files {
+		os.MkdirAll(filepath.Dir(to), 0o755)
+		if strings.EqualFold(filepath.Ext(to), ".exe") {
+			if _, err := os.Stat(to); err == nil {
+				os.Remove(oldName(to))
+				if err := os.Rename(to, oldName(to)); err != nil {
+					undo()
+					return err
+				}
+				moved = append(moved, to)
+			}
+		}
+		if err := copyFile(from, to); err != nil {
+			undo()
+			return err
+		}
+	}
+	return nil
+}
+
+func oldName(exe string) string { return strings.TrimSuffix(exe, filepath.Ext(exe)) + ".old.exe" }
 
 func copyFile(from, to string) error {
 	in, err := os.Open(from)
@@ -195,12 +319,17 @@ func copyFile(from, to string) error {
 	return out.Close()
 }
 
-// cleanAfterUpdate removes the previous version's file once it has stopped.
+// cleanAfterUpdate removes the previous version's programs once they have stopped.
 func cleanAfterUpdate() {
-	exe, _ := os.Executable()
-	old := strings.TrimSuffix(exe, ".exe") + ".old.exe"
 	for i := 0; i < 30; i++ {
-		if _, err := os.Stat(old); err != nil || os.Remove(old) == nil {
+		old, _ := filepath.Glob(filepath.Join(exeDir(), "*.old.exe"))
+		left := 0
+		for _, f := range old {
+			if os.Remove(f) != nil {
+				left++
+			}
+		}
+		if left == 0 {
 			return
 		}
 		time.Sleep(2 * time.Second)

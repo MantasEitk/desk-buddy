@@ -4,7 +4,9 @@
 // there's a download, url (https://… e.g. a GitHub Release asset, or a path on the server),
 // sha256, size}. Install downloads the zip, checks it, unpacks it, swaps in the new Contents
 // (keeping the app itself, so it stays in the Dock), signs it ad hoc and starts it again.
-// Without a url it only says a new version exists (until the GitHub Releases are public).
+// Without a url it only says a new version exists. It also asks GitHub for the newest public
+// release (desk-buddy-latest.json, a file in every release since 1.2: {"mac": {version, url,
+// sha256, size, patchnotes}, "windows": …}).
 
 import AppKit
 import CryptoKit
@@ -20,6 +22,21 @@ enum Updater {
             if x != y { return x > y }
         }
         return false
+    }
+
+    static let latestURL = URL(string: "https://github.com/deskbuddy-app/desk-buddy/releases/latest/download/desk-buddy-latest.json")!
+
+    // fromGitHub: the Mac part of the newest release, nil when GitHub can't be reached
+    static func fromGitHub(_ done: @escaping ([String: Any]?) -> Void) {
+        var req = URLRequest(url: latestURL, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
+        req.setValue("DeskBuddy-mac/" + version, forHTTPHeaderField: "User-Agent")
+        URLSession.shared.dataTask(with: req) { data, resp, _ in
+            guard (resp as? HTTPURLResponse)?.statusCode == 200, let data,
+                  let all = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  let mac = all["mac"] as? [String: Any],
+                  (mac["url"] as? String)?.hasPrefix("https://github.com/deskbuddy-app/") == true else { return done(nil) }
+            done(mac)
+        }.resume()
     }
 
     static func entries(_ any: Any?) -> [HelperModel.NoteEntry] {
@@ -41,6 +58,10 @@ enum Updater {
         guard let file = r["url"] as? String, let sha = r["sha256"] as? String,
               let url = URL(string: file.hasPrefix("http") ? file : server + file) else {
             return say("This version can't be installed from here yet.", false)
+        }
+        guard FileManager.default.isWritableFile(atPath: Bundle.main.bundleURL.path) else {
+            NSWorkspace.shared.open(URL(string: "https://github.com/deskbuddy-app/desk-buddy/releases/latest")!)
+            return say("Desk Buddy can't replace itself where it is. Download the new version from GitHub (just opened) and replace the app.", false)
         }
         say("Downloading…", true)
         var req = URLRequest(url: url, timeoutInterval: 600)
@@ -76,7 +97,7 @@ enum Updater {
             pkill -f "$1/Contents/Resources/helper.py" 2>/dev/null
             pkill -f "$1/Contents/MacOS/desk-buddy-server" 2>/dev/null
             sleep 1
-            rm -rf "$1/Contents" && /usr/bin/ditto "$2/Contents" "$1/Contents"
+            rm -rf "$1/Contents.new"; /usr/bin/ditto "$2/Contents" "$1/Contents.new" && rm -rf "$1/Contents" && mv "$1/Contents.new" "$1/Contents"
             /usr/bin/codesign --force --sign - "$1" >/dev/null 2>&1
             /bin/launchctl kickstart "gui/$(id -u)/\(agentLabel)" 2>/dev/null || /usr/bin/open "$1"
             rm -rf "$3"

@@ -506,8 +506,8 @@ function updatesSection() {
     status = "Version " + esc(r.version) + " is ready. It installs when you click Install, then Desk Buddy restarts." + (u.note ? " " + esc(u.note) : "");
     right = `<span style="display:flex;gap:8px"><button class="pill" onclick="whatsNew=!whatsNew;render()">What's new?</button><button class="pill solid" onclick="act({do:'update'}).then(refresh)">Install</button></span>`;
   } else {
-    status = u.note === "Couldn't check just now" ? "Couldn't reach your Desk Buddy server just now. Try again in a moment."
-      : info.checked ? "You're up to date (checked at " + esc(info.checked) + ")." : "Checked every 6 hours from your Desk Buddy server. It installs only when you click.";
+    status = u.note === "Couldn't check just now" ? "Couldn't check for updates just now. Try again in a moment."
+      : info.checked ? "You're up to date (checked at " + esc(info.checked) + ")." : "Checked every 6 hours. It installs only when you click.";
     right = `<button class="pill" onclick="this.textContent='Checking…';act({do:'checkupdate'}).then(refresh)">Check for updates</button>`;
   }
   let out = `<div class="label" style="margin-top:22px">Updates</div>` + row("Version " + esc(info.version), status, right);

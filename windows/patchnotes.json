@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.2",
+    "date": "2026-10-14",
+    "items": [
+      "Added: Desk Buddy now checks for new versions by itself and installs them when you click Install (About › Updates)",
+      "Bigger Kindle screens work (Paperwhite 3, 4, 5, Signature Edition, Oasis), from 1.1",
+      "Version numbers now match the GitHub release (0.9 → 1.2)"
+    ]
+  },
+  {
     "version": "0.9",
     "date": "2026-10-12",
     "items": [

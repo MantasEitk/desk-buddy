@@ -589,31 +589,52 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     var offered: [String: Any]? // the newer version the server offers (its release.json)
 
-    // checkUpdate asks the server for /mac/release.json (manual: from the button, says so if it fails)
+    // checkUpdate asks GitHub (desk-buddy-latest.json, in every release since 1.2) and the server
+    // for /mac/release.json, and keeps the newest (manual: from the button, says so if both fail)
     func checkUpdate(manual: Bool) {
         if model.updBusy { return }
         if manual { model.updChecking = true; model.updStatus = "" }
-        backend.send("GET", "/mac/release.json") { [weak self] data in
+        let group = DispatchGroup()
+        var found: [[String: Any]] = []
+        var answered = false
+        group.enter()
+        Updater.fromGitHub { r in
             DispatchQueue.main.async {
-                guard let self else { return }
-                self.model.updChecking = false
-                guard let data, let r = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
-                    if manual { self.model.updStatus = "Couldn't reach your Desk Buddy server just now. Try again in a moment." }
-                    return
-                }
-                self.model.updChecked = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
-                self.model.updStatus = ""
-                let v = r["version"] as? String ?? ""
-                if Updater.newer(v, Updater.version) {
-                    self.offered = r
-                    self.model.updVersion = v
-                    let fresh = Updater.entries(r["patchnotes"]).filter { Updater.newer($0.version, Updater.version) }
-                    self.model.updNotes = fresh.isEmpty ? [.init(version: v, date: "", items: r["notes"] as? [String] ?? [])] : fresh
-                    self.model.updCanInstall = r["url"] is String && r["sha256"] is String
-                } else {
-                    self.offered = nil
-                    self.model.updVersion = ""
-                }
+                if let r { answered = true; found.append(r) }
+                group.leave()
+            }
+        }
+        group.enter()
+        backend.send("GET", "/mac/release.json") { data in
+            DispatchQueue.main.async {
+                if let data, let r = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] { answered = true; found.append(r) }
+                group.leave()
+            }
+        }
+        group.notify(queue: .main) { [weak self] in
+            guard let self else { return }
+            self.model.updChecking = false
+            guard answered else {
+                if manual { self.model.updStatus = "Couldn't check for updates just now. Try again in a moment." }
+                return
+            }
+            self.model.updChecked = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
+            self.model.updStatus = ""
+            // the newest; one that can be installed wins a tie
+            let r = found.max { a, b in
+                let va = a["version"] as? String ?? "", vb = b["version"] as? String ?? ""
+                return Updater.newer(vb, va) || (va == vb && a["url"] == nil && b["url"] != nil)
+            } ?? [:]
+            let v = r["version"] as? String ?? ""
+            if Updater.newer(v, Updater.version) {
+                self.offered = r
+                self.model.updVersion = v
+                let fresh = Updater.entries(r["patchnotes"]).filter { Updater.newer($0.version, Updater.version) }
+                self.model.updNotes = fresh.isEmpty ? [.init(version: v, date: "", items: r["notes"] as? [String] ?? [])] : fresh
+                self.model.updCanInstall = r["url"] is String && r["sha256"] is String
+            } else {
+                self.offered = nil
+                self.model.updVersion = ""
             }
         }
     }
