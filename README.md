@@ -15,6 +15,7 @@
   <a href="../../releases/latest/download/Desk-Buddy-for-Windows.zip"><img src="https://img.shields.io/badge/Download_for_Windows-000000?style=for-the-badge&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0zIDNoOC41djguNUgzek0xMi41IDNIMjF2OC41aC04LjV6TTMgMTIuNWg4LjVWMjFIM3pNMTIuNSAxMi41SDIxVjIxaC04LjV6Ii8+PC9zdmc+" alt="Download for Windows" height="44"></a>
 </p>
 <p align="center"><sub>The Kindle app comes with it: plug your jailbroken Kindle in and click once. <a href="#download">More download options</a></sub></p>
+<p align="center"><sub><b>Got 1.0 or 1.1?</b> Download it once more: from 1.2 on, Desk Buddy updates itself.</sub></p>
 
 <p align="center">
 <img src="docs/tasks.png" width="49%" alt="Tasks with today's calendar beside them"> <img src="docs/clock.png" width="49%" alt="Standby clock with the next event">
